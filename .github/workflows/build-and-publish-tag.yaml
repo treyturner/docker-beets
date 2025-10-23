@@ -1,0 +1,18 @@
+name: Build and publish tag
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        required: true
+        type: string
+
+jobs:
+  build-and-publish-tag:
+    uses: ./.github/workflows/build-and-publish.yaml
+    with:
+      ref: ${{ inputs.tag }}
+      tags: |
+        ${{ inputs.tag }}-${{ github.run_id }}.${{ github.run_attempt }}
+        ${{ inputs.tag }}
+    secrets: inherit

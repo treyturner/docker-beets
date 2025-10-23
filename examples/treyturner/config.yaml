@@ -1,0 +1,433 @@
+# Sample configuration for treyturner/beets. Paths align with this example
+# setup (/library, /config); adjust them to match your own mounts. The plugin
+# list assumes the bundled extras.
+#
+# Copy examples/treyturner/* to a directory on the Docker host, bind-
+# mount it to /config in the container, and modify to suit your needs.
+
+plugins:
+  - albumtypes
+  - beatport4
+  - bucket
+  - chroma
+  - clutter
+  - discogs
+  - embedart
+  - fetchart
+  - filetote
+  - ftintitle
+  - importadded
+  - importreplace
+  - info
+  - inline
+  - lastgenre
+  - lyrics
+  - permissions
+  - replaygain
+  - rewrite
+  - scrub
+  - the
+  - web
+
+# In this example the library lives on the `/library` mount; the container
+# entrypoint creates owner-writable trees with UMASK=0022. Override UMASK at
+# runtime if you prefer group-writable behaviour (Unraid) or mount elsewhere.
+directory: /library
+id3v23: no
+library: /config/library.db
+original_date: yes
+path_sep_replace: "\u29F8"
+per_disc_numbering: yes
+threaded: yes
+
+album_fields:
+  is_music: |
+    token = None
+    valid_libs = ['Christmas', 'Comedy', 'Field', 'Halloween', 'Kids', 'Music']
+    try:
+      token = 1 if library.title() == 'Music' else 0
+    except NameError:
+      raise Exception(f"You must specify a library using --set library=<library>\nAvailable libraries: {valid_libs}")
+    return token
+
+  cat_token: |
+    token = ''
+    blacklist = ['none', '[none]', 'n/a', '-']
+    catnum = catalognum if catalognum.lower() not in blacklist else ''
+    if len(catnum) > 0:
+      token += ' {' + catnum + '}'
+    return token
+
+  label_token: |
+    token = ''
+    blacklist = ['none', '[none]', 'n/a', '-']
+    lbl = label if label.lower() not in blacklist else ''
+    catnum = catalognum if catalognum.lower() not in blacklist else ''
+    if len(lbl) + len(catnum) > 0:
+      token += ' {'
+      if len(lbl) > 0:
+        token += lbl
+        if len(catnum) > 0:
+          token += ', '
+      if len(catnum) > 0:
+        token += catnum
+      token += '}'
+    return token
+
+  library_token: |
+    token = None
+    valid_libs = ['Christmas', 'Comedy', 'Field', 'Halloween', 'Kids', 'Music']
+    try:
+      if library.title() in valid_libs:
+        token = library.title()
+    except NameError:
+      raise Exception(f"You must specify a library using --set library=<library>\nAvailable libraries: {valid_libs}")
+    return token
+
+  media_token: |
+    medias_unsorted = []
+    for item in items:
+      if item.media not in medias_unsorted: medias_unsorted.append(item.media)
+    media_sort_order = ['SACD', 'CD', 'CAS', 'VNL', 'BR', 'DVD', 'WEB']
+    medias = []
+    for mso in media_sort_order:
+      if mso in medias_unsorted: medias.append(mso)
+    if len(medias) < 1:
+      if len(medias_unsorted) > 0:
+        return '+'.join(medias_unsorted)
+      else:
+        return 'WEB'
+    return '+'.join(medias)
+
+  format_token: |
+    formats_unsorted = []
+    for item in items:
+      if item.format not in formats_unsorted: formats_unsorted.append(item.format)
+    format_sort_order = ['TRUEHD', 'DTS', 'FLAC', 'ALAC', 'APE', 'WAVPACK', 'WAV', 'OGG', 'AAC', 'MP3', 'WMA']
+    format_codecs = []
+    for fso in format_sort_order:
+      if fso in formats_unsorted: format_codecs.append(fso)
+    lossless_formats = ['TRUEHD', 'FLAC', 'ALAC', 'APE', 'WAVPACK', 'WAV']
+    formats = []
+    for format in format_codecs:
+      if format in lossless_formats:
+        fmt_bitdepth = 0
+        fmt_samplerate = 0
+        item_count = 0
+        fmt_maxchannels = 0
+        for item in list(filter(lambda i: i.format == format, items)):
+          item_count += 1
+          fmt_maxchannels = max(fmt_maxchannels, item.channels)
+          fmt_bitdepth += item.bitdepth
+          fmt_samplerate += item.samplerate
+        if item_count > 0:
+          fmt_bitdepth = round(fmt_bitdepth / item_count)
+          fmt_samplerate = round(fmt_samplerate / item_count / 1000)
+          channel_token = ''
+          if fmt_maxchannels > 2:
+            channel_value = f'{fmt_maxchannels}.0';
+            if fmt_maxchannels == 6:
+              channel_value = '5.1'
+            elif fmt_maxchannels == 8:
+              channel_value = '7.1'
+            channel_token = f' {channel_value}'
+          ftoken = f' {format}{channel_token} {fmt_bitdepth}-{fmt_samplerate}'
+          formats.append(ftoken)
+      else:
+        fmt_avgbitrate = 0
+        item_count = 0
+        fmt_maxchannels = 0
+        for item in list(filter(lambda i: i.format == format, items)):
+          item_count += 1
+          fmt_maxchannels = max(fmt_maxchannels, item.channels)
+          fmt_avgbitrate += item.bitrate
+        if item_count > 0:
+          fmt_avgbitrate = round(fmt_avgbitrate / item_count / 1000)
+          channel_token = ''
+          if fmt_maxchannels > 2:
+            channel_value = f'{fmt_maxchannels}.0';
+            if fmt_maxchannels == 6:
+              channel_value = '5.1'
+            elif fmt_maxchannels == 8:
+              channel_value = '7.1'
+            channel_token = f' {channel_value}'
+          ftoken = f' {format}{channel_token} {fmt_avgbitrate}'
+          formats.append(ftoken)
+    return ','.join(formats)
+
+  mediaformat_token: |
+    return f" [{media_token}{format_token}]"
+
+  albumdisambig_token: |
+    return '' if not albumdisambig else f" ({albumdisambig.title()})"
+
+albumtypes:
+  types:
+    - ep: ' EP'
+    - single: ' (Single)'
+    - soundtrack: ' OST'
+    - compilation: ' (Anthology)'
+  ignore_va: compilation
+  bracket: ''
+
+beatport4:
+  art: yes
+  art_overwrite: no
+  art_width: 2160
+  #username: some_username
+  #password: some_password
+
+bucket:
+   bucket_alpha: ['# - D', 'E - L', 'M - R', 'S - Z']
+   bucket_alpha_regex:
+     '# - D': ^[!-\/0-9:-@A-Da-d¡¢¤©ª«¬²-¿À-Çà-çÐ]
+     'E - L': ^[E-Le-lÈ-Ïè-ï£]
+     'M - R': ^[M-Rm-rÑ-Öñ-öØœ®°]
+     'S - Z': ^[S-Zs-zŠšŽžŸù-ýÿ¥§]
+
+chroma:
+  auto: yes
+
+clutter:
+  - '*.cue'
+  - '*.doc'
+  - '*.m3u'
+  - '*.m3u8'
+  - '*.par'
+  - '*.par2'
+  - '*.pls'
+  - '*.rtf'
+  - '*.sfv'
+  - '*.txt'
+  - '.DS_Store'
+  - 'album.jpg'
+  - 'album.jpeg'
+  - 'album.png'
+  - 'cover.jpg'
+  - 'cover.jpeg'
+  - 'cover.png'
+  - 'folder.jpg'
+  - 'folder.jpeg'
+  - 'folder.png'
+  - 'front.jpg'
+  - 'front.jpeg'
+  - 'front.png'
+  - 'proof.*'
+  - 'Thumbs.DB'
+
+embedart:
+  auto: yes
+  maxwidth: 2160
+  minwidth: 2160
+  quality: 90
+  remove_art_file: no
+
+fetchart:
+  auto: yes
+  enforce_ratio: yes
+  #fanarttv_key: some_api_key
+  high_resolution: yes
+  #lastfm_key: some_api_key
+  max_filesize: 20000000
+  maxwidth: 2160
+  minwidth: 2160
+  quality: 90
+  sources: coverart itunes amazon albumart lastfm fanarttv wikipedia filesystem
+  store_source: yes
+
+filetote:
+  exclude:
+    filenames:
+      - album.jpeg
+      - album.jpg
+      - album.png
+      - cover.jpeg
+      - cover.jpg
+      - cover.png
+      - folder.jpeg
+      - folder.jpg
+      - folder.png
+      - front.jpeg
+      - front.jpg
+      - front.png
+  extensions: .diz .jpeg .jpg .log .nfo .pdf .png .srr .txt
+  paths:
+    ext:.diz: $albumpath/$subpath$old_filename
+    ext:.log: $albumpath/$subpath$old_filename
+    ext:.nfo: $albumpath/$subpath$old_filename
+    ext:.pdf: $albumpath/$subpath$old_filename
+    ext:.srr: $albumpath/$subpath$old_filename
+    ext:.txt: $albumpath/$subpath$old_filename
+    pattern:artworkdir: $albumpath/$subpath$old_filename
+  patterns:
+    artworkdir:
+      - "**/[sS]can*/"
+
+ftintitle:
+  format: "ft. {0}"
+
+import:
+  default_action: none
+  detail: yes
+  duplicate_action: ask
+  duplicate_verbose_prompt: yes
+  incremental: yes
+  incremental_skip_later: yes
+  languages: en
+  log: /config/beets.log
+  timid: no
+  quiet: no
+  write: yes
+  copy: no
+  move: yes
+
+importreplace:
+  replacements:
+    - item_fields: artist artist_sort artist_credit albumartist albumartist_sort albumartist_credit
+      album_fields: artist artist_sort artist_credit albumartist albumartist_sort albumartist_credit
+      replace:
+        '[\u2010-\u2015]': '-'
+        '[\u2018-\u201B]': ''''
+        '[\u201C-\u201F]': '"'
+        '\b[Ff]eat\.\b': 'ft.'
+        '\b[Ff]eaturing\b': 'ft.'
+        '\bVs\.\b': 'vs.'
+        '\b[Vv]ersus\b': 'vs.'
+        '\b[Vv]ers.\b': 'vs.'
+    - item_fields: title album
+      album_fields: album
+      replace:
+        '[\u2010-\u2015]': '-'
+        '[\u2018-\u201B]': ''''
+        '[\u201C-\u201F]': '"'
+        '\b[Ff]eat\.\b': 'ft.'
+        '\b[Ff]eaturing\b': 'ft.'
+        '\bVs\.\b': 'vs.'
+        '\b[Vv]ersus\b': 'vs.'
+        '\b[Vv]ers\.\b': 'vs.'
+        '\bRMX\b': 'Remix'
+    - item_fields: album
+      album_fields: album
+      replace:
+        '\s+[Ee][Pp]$': ''
+        '\s*\(\s*(?=[^)]*(?:[Ss]ound\s*[Tt]rack|[Ss]core|[Ss]ongs|[Mm]usic\s+[Ff]rom|[Mm]otion\s+[Pp]icture))[^)]*\s*\)': ''
+    - item_fields: albumdisambig
+      album_fields: albumdisambig
+      replace:
+        '\d\d[\s-]?[Bb]it': ''
+        '\d\d[\s-]?[Kk][Hh][Zz]': ''
+        '\s+$': ''
+        '^\s+': ''
+        '\b\s+\b': ' '
+        '\s*,\s*\/?\s*$': ''
+        '^\s*\/?\s*,\s*': ''
+    - item_fields: media
+      album_fields: media
+      replace:
+        'Digital Media': 'WEB'
+        'File': 'WEB'
+        'Blu-ray': 'BR'
+        '12" Vinyl': 'VNL'
+        '10" Vinyl': 'VNL'
+        '7" Vinyl': 'VNL'
+        'Vinyl': 'VNL'
+        'Cassette': 'CAS'
+        'SHM-CD': 'CD'
+    - item_fields: label catalognum
+      album_fields: label catalognum
+      replace:
+        '[\u2010-\u2015]': '-'
+        '[\u2018-\u201B]': ''''
+        '[\u201C-\u201F]': '"'
+        '(?i)^none$': ''
+        '(?i)^\[none\]$': ''
+        '(?i)^n/a$': ''
+        '^-$': ''
+
+item_fields:
+  disctitle_token: |
+    if disctotal > 1:
+      disctitle_token = f'CD{str(disc).zfill(len(str(disctotal)))}'
+      if disctitle not in (album, ''):
+        disctitle_token += f' - {disctitle}'
+      return f'{disctitle_token}'
+    else:
+      return ''
+  track_token: |
+    disc_token = ''
+    if disctotal > 1:
+      disc_token = f'{str(disc).zfill(len(str(disctotal)))}-'
+    track_token = str(track).zfill(max(len(str(tracktotal)) if tracktotal else 0, 2))
+    token = f'{disc_token}{track_token}. {artist} - {title}'
+    return token
+
+lastgenre:
+  canonical: /config/genre-tree.yaml
+  min_weight: 50
+  prefer_specific: yes
+  source: album
+  whitelist: /config/genre-whitelist.txt
+
+lyrics:
+  force: yes
+  sources: [lrclib, genius]
+  synced: yes
+
+match:
+  ignored: missing_tracks unmatched_tracks
+  ignored_media: ['SVCD', 'VCD', 'UMD', 'VHS']
+  preferred:
+    media: ['CD|Digital Media|File', 'SACD', 'Vinyl']
+    countries: ['US', 'GB|UK']
+  strong_rec_thresh: 0.001
+
+musicbrainz:
+  external_ids:
+    discogs: yes
+    spotify: yes
+    bandcamp: yes
+    beatport: yes
+    deezer: yes
+    tidal: yes
+  searchlimit: 10
+
+paths:
+  default: "$library_token/%if{$is_music,%bucket{$albumartist,alpha}/}%the{$albumartist}/$year-$month-$day - $album$atypes$albumdisambig_token$label_token$mediaformat_token/%if{$multidisc,$disctitle_token/}$track_token"
+  singleton: "$library_token/%if{$is_music,%bucket{$albumartist,alpha}/}%the{$albumartist}/$year-$month-$day - $title$atypes$albumdisambig_token$label_token$mediaformat_token/%if{$multidisc,$disctitle_token/}$track_token"
+  albumtype:soundtrack: "$library_token/Soundtracks/%the{$albumartist} - %the{$album}$atypes$albumdisambig_token ($year)$label_token$mediaformat_token/%if{$multidisc,$disctitle_token/}$track_token"
+  comp: "$library_token/VA/%the{$label}/$year-$month-$day - $album$atypes$albumdisambig_token$cat_token$mediaformat_token/%if{$multidisc,$disctitle_token/}$track_token"
+
+# Permissions plugin mirrors the container's 0022 umask. Set files to 660
+# and dirs to 770 if you run with UMASK=0002 and need shared-group writes.
+permissions:
+  file: 644
+  dir: 755
+
+replace:
+  '/': "\u29F8"
+  '\\': "\u29F9"
+  '\?': "\uFF1F"
+  ':': "\u2236"
+  '\.\.\.': "\u2026"
+  '^\.': ''
+  '<': "\u2039"
+  '>': "\u203A"
+  '\*': "\u2731"
+  '\|': "\uFF5C"
+  '[\x00-\x1F]': ''
+  '\.$': ''
+  '\s+$': ''
+  '"': '＂'
+  '[\u2010-\u2015]': '-'
+  '[\u2018-\u201B]': ''''
+  '[\u201C-\u201F]': '＂'
+
+replaygain:
+  backend: ffmpeg
+
+scrub:
+  auto: yes
+
+web:
+    host: 0.0.0.0
+    port: 8337

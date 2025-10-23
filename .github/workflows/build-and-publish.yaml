@@ -1,0 +1,93 @@
+name: Build and publish
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        required: true
+        type: string
+      tags:
+        required: true
+        type: string
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    env:
+      PROJECT_NAME: beets
+      DOCKERHUB_REPOSITORY: beets
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare tag list
+        id: prepare-tags
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_REPOSITORY: ${{ env.DOCKERHUB_REPOSITORY }}
+          PROJECT_NAME: ${{ env.PROJECT_NAME }}
+          REPO_OWNER: ${{ github.repository_owner }}
+          TAGS_INPUT: ${{ inputs.tags }}
+        run: |
+          set -euo pipefail
+
+          username="${DOCKERHUB_USERNAME:-}"
+          if [ -z "$username" ]; then
+            echo "Missing DOCKERHUB_USERNAME secret" >&2
+            exit 1
+          fi
+
+          tags=$(printf '%s\n' "$TAGS_INPUT" | sed '/^\s*$/d')
+          if [ -z "$tags" ]; then
+            echo "No tags provided" >&2
+            exit 1
+          fi
+
+          python3 - <<'PY'
+import os
+import sys
+
+tags_raw = os.environ["TAGS_INPUT"].splitlines()
+tags = [tag.strip() for tag in tags_raw if tag.strip()]
+if not tags:
+    sys.exit("No tags provided")
+
+username = os.environ["DOCKERHUB_USERNAME"]
+if not username:
+    sys.exit("Missing DOCKERHUB_USERNAME secret")
+
+hub_repo = os.environ.get("DOCKERHUB_REPOSITORY") or os.environ["PROJECT_NAME"]
+project = os.environ["PROJECT_NAME"]
+owner = os.environ["REPO_OWNER"].lower()
+
+entries = []
+for tag in tags:
+    entries.append(f"{username}/{hub_repo}:{tag}")
+    entries.append(f"ghcr.io/{owner}/{project}:{tag}")
+
+with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as fh:
+    fh.write("tags<<EOF\n")
+    fh.write("\n".join(entries))
+    fh.write("\nEOF\n")
+PY
+
+      - name: DockerHub login
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: GitHub Container Registry login
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          build-args: |
+            BEETS_REF=${{ inputs.ref }}
+          tags: ${{ steps.prepare-tags.outputs.tags }}

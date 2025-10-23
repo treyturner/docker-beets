@@ -3,16 +3,37 @@ name: Build and publish tag
 on:
   workflow_dispatch:
     inputs:
-      tag:
+      label:
+        required: false
+        type: string
+      ref:
+        required: false
+        type: string
+        default: "main"
+      upstream-ref:
         required: true
         type: string
 
 jobs:
   build-and-publish-tag:
-    uses: ./.github/workflows/build-and-publish.yaml
-    with:
-      ref: ${{ inputs.tag }}
-      tags: |
-        ${{ inputs.tag }}-${{ github.run_id }}.${{ github.run_attempt }}
-        ${{ inputs.tag }}
-    secrets: inherit
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Build and publish tag
+        uses: ./.github/actions/build-and-publish
+        with:
+          dockerhub-password: ${{ secrets.DOCKERHUB_TOKEN }}
+          dockerhub-username: ${{ vars.DOCKERHUB_USERNAME }}
+          github-token: ${{ github.token }}
+          label: ${{ inputs.label }}
+          repos: |
+            ghcr.io/treyturner/beets
+            docker.io/treyturner/beets
+          upstream-ref: ${{ inputs.upstream-ref }}

@@ -12,8 +12,8 @@ handles UID/GID mapping at runtime. Images published to Docker Hub and GHCR.
 ### Tag Strategy
 
 - `${BEETS_REF}-dev` – latest dev image produced from merges to this repo’s `main` branch.
-- `${BEETS_REF}-dev<run_id>.<attempt_id>` – build-specific dev image for traceability
-  (e.g. `v2.5.1-dev123456789.1`).
+- `${BEETS_REF}-dev-<run_id>.<attempt_id>` – build-specific dev image for traceability
+  (e.g. `v2.5.1-dev-123456789.1`).
 - `vX.Y.Z` – manual builds that pin the upstream beets release tag (e.g. `v2.5.1`).
 - `latest`, `stable` – assignable aliases via the promotion workflow.
 

@@ -57,7 +57,7 @@ jobs:
       - name: DockerHub login
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: GitHub Container Registry login
@@ -69,7 +69,7 @@ jobs:
 
       - name: Promote tags
         env:
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
           DOCKERHUB_REPOSITORY: ${{ env.DOCKERHUB_REPOSITORY }}
           PROJECT_NAME: ${{ env.PROJECT_NAME }}
           GH_OWNER: ${{ github.repository_owner }}

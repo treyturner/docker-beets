@@ -1,0 +1,113 @@
+name: Build and publish
+description: Build a Dockerfile and publish to one or more repositories
+
+inputs:
+  dockerhub-username:
+    type: string
+    required: false
+  dockerhub-password:
+    type: string
+    required: false
+  github-token:
+    type: string
+    required: true
+  label:
+    description: "Optional build suffix, e.g. 'dev'"
+    type: string
+    required: false
+  repos:
+    description: "Newline-separated list of <registry>/<repository> where the image will be pushed"
+    type: string
+    required: false
+  upstream-ref:
+    description: "Upstream ref to build"
+    type: string
+    required: true
+
+outputs:
+  repositories:
+    description: "Newline-separated list of <registry>/<repository> where the image was pushed"
+    value: ${{ steps.compute.outputs.repositories }}
+  tags:
+    description: "Newline-separated list of built tags"
+    value: ${{ steps.compute.outputs.tags }}
+  refs:
+    description: "Newline-separated list of fully-qualified image refs (repository:tag)"
+    value: ${{ steps.compute.outputs.refs }}
+runs:
+  using: composite
+  steps:
+    - name: Compute tags and refs
+      id: compute
+      shell: bash -euo pipefail {0}
+      env:
+        UPSTREAM_REF: ${{ inputs.upstream-ref }}
+        LABEL: ${{ inputs.label }}
+        REPOS: ${{ inputs.repos }}
+      run: |
+        tags=()
+        base_tag="${UPSTREAM_REF}${LABEL:+-$LABEL}"
+        tags+=("${base_tag}")
+
+        run_tag="${base_tag}-${GITHUB_RUN_ID}.${GITHUB_RUN_ATTEMPT}"
+        tags+=("${run_tag}")
+
+        mapfile -t repo_list < <(
+          printf '%s' "${REPOS:-}" \
+            | sed 's/\\r//g' \
+            | sed 's/\\n/\n/g' \
+            | sed '/^\s*$/d'
+        )
+        refs=()
+        for repo in "${repo_list[@]:-}"; do
+          repo="$(printf '%s' "$repo" | xargs)"
+          [ -z "${repo}" ] && continue
+          for tag in "${tags[@]}"; do
+            refs+=("${repo}:${tag}")
+          done
+        done
+
+        if ((${#refs[@]} == 0)); then
+          local_repo="local/${GITHUB_REPOSITORY#*/}"
+          for tag in "${tags[@]}"; do
+            refs+=("${local_repo}:${tag}")
+          done
+        fi
+
+        printf 'tags<<EOF\n%s\nEOF\n' "$(printf '%s\n' "${tags[@]}")" >> "$GITHUB_OUTPUT"
+        printf 'refs<<EOF\n%s\nEOF\n' "$(printf '%s\n' "${refs[@]}")" >> "$GITHUB_OUTPUT"
+        if ((${#repo_list[@]})); then
+          printf 'repositories<<EOF\n%s\nEOF\n' "$(printf '%s\n' "${repo_list[@]}")" >> "$GITHUB_OUTPUT"
+        else
+          echo 'repositories=' >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Login to DockerHub
+      if: ${{ contains(steps.compute.outputs.repositories, 'docker.io') && inputs.dockerhub-username != '' && inputs.dockerhub-password != '' }}
+      uses: docker/login-action@v3
+      with:
+        username: ${{ inputs.dockerhub-username }}
+        password: ${{ inputs.dockerhub-password }}
+
+    - name: Login to GitHub Container Registry
+      if: ${{ contains(steps.compute.outputs.repositories, 'ghcr.io') }}
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.repository_owner }}
+        password: ${{ inputs.github-token }}
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      with:
+        driver: docker-container
+
+    - name: Build and push
+      id: push
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        push: ${{ steps.compute.outputs.repositories != '' }}
+        build-args: |
+          BEETS_REF=${{ inputs.upstream-ref }}
+        tags: ${{ steps.compute.outputs.refs }}

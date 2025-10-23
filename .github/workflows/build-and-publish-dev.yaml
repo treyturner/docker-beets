@@ -1,18 +1,27 @@
 name: Build and publish dev
 
-env:
-  BEETS_REF: v2.5.1
-
 on:
   push:
     branches: [main]
+  pull_request:
+    types: ['open', 'synchronize']
 
 jobs:
   build-and-publish-dev:
-    uses: ./.github/workflows/build-and-publish.yaml
-    with:
-      ref: ${{ env.BEETS_REF }}
-      tags: |
-        ${{ env.BEETS_REF }}-dev
-        ${{ env.BEETS_REF }}-dev${{ github.run_id }}.${{ github.attempt_id }}
-    secrets: inherit
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build and publish
+        uses: ./.github/actions/build-and-publish
+        with:
+          dockerhub-username: ${{ vars.DOCKERHUB_USERNAME }}
+          dockerhub-password: ${{ secrets.DOCKERHUB_TOKEN }}
+          github-token: ${{ github.token }}
+          label: ${{ github.event_name == 'push' && 'dev' || format('pr{0}', github.event.pull_request.number) }}
+          repos: ${{ github.event_name == 'push' && format('{0}\n{1}', 'ghcr.io/treyturner/beets', 'docker.io/treyturner/beets') || '' }}
+          upstream-ref: v2.5.1

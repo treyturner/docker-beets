@@ -2,12 +2,22 @@
 set -e
 
 # Apply umask for the whole process tree
-# shellcheck disable=SC2086
-umask ${UMASK}
+umask "${UMASK:-0002}"
 
 # Defaults (can be overridden at runtime)
 PUID="${PUID:-99}"
 PGID="${PGID:-100}"
+
+# Install runtime packages if requested
+if [ -n "${RUNTIME_APK_PACKAGES}" ]; then
+  echo "Installing runtime APK packages: ${RUNTIME_APK_PACKAGES}"
+  apk add --no-cache ${RUNTIME_APK_PACKAGES}
+fi
+
+if [ -n "${RUNTIME_PIP_PACKAGES}" ]; then
+  echo "Installing runtime Python packages: ${RUNTIME_PIP_PACKAGES}"
+  python3 -m pip install --no-cache-dir ${RUNTIME_PIP_PACKAGES}
+fi
 
 # Create group if missing
 if ! getent group "${PGID}" >/dev/null 2>&1; then

@@ -137,7 +137,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     # Runtime-configurable: set user IDs and umask at container start
     PUID=99 \
     PGID=100 \
-    UMASK=0022
+    UMASK=0002
 
 # Minimal runtime packages + su-exec for dropping privileges
 RUN apk add --no-cache \
@@ -180,10 +180,11 @@ RUN set -eux; \
 RUN mkdir -p ${CONFIG_DIR}
 WORKDIR ${CONFIG_DIR}
 
-# Copy entrypoint
+# Copy entrypoint and startup scripts
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+COPY start-web.sh /usr/local/bin/start-web.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh /usr/local/bin/start-web.sh
 
 ENV BEETSDIR=${CONFIG_DIR}
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
-CMD ["sh", "-c", "CONFIG=${BEETSDIR:-/config}/config.yaml; mkdir -p \"$(dirname \"$CONFIG\")\"; if [ ! -f \"$CONFIG\" ]; then printf 'plugins:\\n  - web\\nweb:\\n  host: 0.0.0.0\\n' > \"$CONFIG\"; fi; yq -i '.plugins = (.plugins // [])' \"$CONFIG\"; yq -i '.plugins = (.plugins + [\"web\"] | unique)' \"$CONFIG\"; yq -i '.web.host = (.web.host // \"0.0.0.0\")' \"$CONFIG\"; exec beet web"]
+CMD ["/usr/local/bin/start-web.sh"]

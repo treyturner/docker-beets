@@ -77,4 +77,14 @@ runs:
         fi
         echo "✅ Default UMASK test passed (permissions: ${perms})"
 
+        # Run entrypoint with PUID and PGID args to restore ownership so runner
+        # cleanup works. Happens to also functionally test PUID and PGID env.
+        # vars, as cleanup will fail along with this test if they stop working.
+        docker run --rm \
+          -e PUID="$(id -u)" \
+          -e PGID="$(id -g)" \
+          -v "${test_dir}:/config" \
+          ${{ inputs.image-ref }} \
+          true
+
         echo "✅ All UMASK tests passed"

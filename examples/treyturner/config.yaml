@@ -7,14 +7,14 @@
 
 plugins:
   - albumtypes
-  - beatport4
+  #- beatport4  # Currently not compatible with beets >= 2.4.0
   - bucket
   - chroma
   - clutter
   - discogs
   - embedart
   - fetchart
-  - filetote
+  #- filetote  # Currently not compatible with beets >= 2.4.0
   - ftintitle
   - importadded
   - importreplace
@@ -29,9 +29,6 @@ plugins:
   - the
   - web
 
-# In this example the library lives on the `/library` mount; the container
-# entrypoint creates owner-writable trees with UMASK=0022. Override UMASK at
-# runtime if you prefer group-writable behaviour (Unraid) or mount elsewhere.
 directory: /library
 id3v23: no
 library: /config/library.db
@@ -397,30 +394,35 @@ paths:
   albumtype:soundtrack: "$library_token/Soundtracks/%the{$albumartist} - %the{$album}$atypes$albumdisambig_token ($year)$label_token$mediaformat_token/%if{$multidisc,$disctitle_token/}$track_token"
   comp: "$library_token/VA/%the{$label}/$year-$month-$day - $album$atypes$albumdisambig_token$cat_token$mediaformat_token/%if{$multidisc,$disctitle_token/}$track_token"
 
-# Permissions plugin mirrors the container's 0022 umask. Set files to 660
-# and dirs to 770 if you run with UMASK=0002 and need shared-group writes.
 permissions:
-  file: 644
-  dir: 755
+  file: 660
+  dir: 770
 
 replace:
-  '/': "\u29F8"
-  '\\': "\u29F9"
-  '\?': "\uFF1F"
-  ':': "\u2236"
-  '\.\.\.': "\u2026"
-  '^\.': ''
-  '<': "\u2039"
-  '>': "\u203A"
-  '\*': "\u2731"
-  '\|': "\uFF5C"
-  '[\x00-\x1F]': ''
-  '\.$': ''
-  '\s+$': ''
-  '"': '＂'
-  '[\u2010-\u2015]': '-'
-  '[\u2018-\u201B]': ''''
-  '[\u201C-\u201F]': '＂'
+  '/': "\u29F8"  # / -> ⧸
+  '\\': "\u29F9"  # \ -> ⧹
+  '\?': "\uFF1F"  # ? -> ？
+  ':': "\u2236"  # : -> ∶
+  '\.\.\.': "\u2026"  # ... -> …
+  '^\.': ''  # prevent hidden files caused by leading periods
+  '<': "\u2039"  # < -> ‹
+  '>': "\u203A"  # > -> ›
+  '\*': "\u2731"  # * -> ✱
+  '\|': "\uFF5C"  # | -> ｜
+  '[\x00-\x1F]': ''  # prevent unprintable characters
+  '\.$': ''  # prevent trailing periods
+  '\s+$': ''  # prevent trailing spaces
+  '"': "\uFF02"  # encode ascii quotes to unicode " -> ＂
+  '[\u2010-\u2015]': '-'  # normalize hyphens, ‐‑‒–—― -> -
+  '[\u2018-\u2019]': ''''  # normalize smart quotes, ‘’ -> '
+  "\u201B": ''''  # normalize prime quotes, ‛ -> '
+  "\u2032": ''''  # normalize prime quotes, ′ -> '
+  '[\u201C-\u201D]': "\uFF02"  # normalize smart double quotes, “” -> ＂
+  "\u201F": "\uFF02"  # normalize double prime quotes, ‟ -> ＂
+  "\u2033": "\uFF02"  # normalize double prime quotes, ″ -> ＂
+  '[\uFE4D-\uFE4F]': "_"  # normalize underscores, ﹍﹎﹏ -> _
+  "\uFF3F": "_"  # normalize fullwidth underscore,＿ -> _
+
 
 replaygain:
   backend: ffmpeg

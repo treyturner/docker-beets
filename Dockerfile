@@ -87,13 +87,13 @@ RUN set -eux; \
     fi; \
     if [ "${classification}" != "ok" ]; then \
       if [ "${classification}" = "disable_high" ]; then \
-        echo "Disabling beets-filetote (requires beets < 2.4.0)" >&2; \
+        echo "Disabling beets-filetote and beets-beatport4 (require beets < 2.4.0)" >&2; \
       else \
-        echo "Disabling beets-filetote (requires beets >= 2.3.0)" >&2; \
+        echo "Disabling beets-filetote and beets-beatport4 (require beets >= 2.3.0)" >&2; \
       fi; \
       filtered=''; \
       for pkg in ${default_sources}; do \
-        if [ "${pkg}" = "beets-filetote" ] || [ -z "${pkg}" ]; then \
+        if [ "${pkg}" = "beets-filetote" ] || [ "${pkg}" = "beets-beatport4" ] || [ -z "${pkg}" ]; then \
           continue; \
         fi; \
         filtered="${filtered} ${pkg}"; \
@@ -101,7 +101,7 @@ RUN set -eux; \
       default_sources="${filtered# }"; \
       filtered=''; \
       for pkg in ${default_packages}; do \
-        if [ "${pkg}" = "beets-filetote" ] || [ -z "${pkg}" ]; then \
+        if [ "${pkg}" = "beets-filetote" ] || [ "${pkg}" = "beets-beatport4" ] || [ -z "${pkg}" ]; then \
           continue; \
         fi; \
         filtered="${filtered} ${pkg}"; \

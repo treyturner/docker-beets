@@ -1,0 +1,27 @@
+name: Build and test PR
+
+on:
+  pull_request:
+    types: ['opened', 'synchronize']
+
+jobs:
+  build-and-test-pr:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      BEETS_VERSION: "2.5.1"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build
+        id: build
+        uses: ./.github/actions/build
+        with:
+          label: ${{ format('pr{0}', github.event.pull_request.number) }}
+          upstream-ref: v${{ env.BEETS_VERSION }}
+
+      - name: Test
+        shell: bash -euo pipefail {0}
+        run: docker run --rm ${{ steps.build.outputs.primary-ref }} beet --version | grep -q 'beets version ${{ env.BEETS_VERSION }}'

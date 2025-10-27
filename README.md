@@ -11,11 +11,17 @@ handles UID/GID mapping at runtime. Images published to Docker Hub and GHCR.
 
 ### Tag Strategy
 
-- `${BEETS_REF}-dev` – latest dev image produced from merges to this repo’s `main` branch.
-- `${BEETS_REF}-dev-<run_id>.<attempt_id>` – build-specific dev image for traceability
-  (e.g. `v2.5.1-dev-123456789.1`).
-- `vX.Y.Z` – manual builds that pin the upstream beets release tag (e.g. `v2.5.1`).
-- `latest`, `stable` – assignable aliases via the promotion workflow.
+- `vX.Y.Z` - manual builds that pin the upstream beets release tag (e.g. `v2.5.1`)
+  - You want one of these. They **ARE** mutable, but always contain the specified version of beets.
+  - Need a version not currently posted? Open an issue and I'd be happy to build and publish it.
+- `latest` - the latest version of beets that I manually promoted after deeming it stable (YMMV)
+  - **Discouraged**, but provided for convenience if you don't require a specific version of beets
+  - ⚠️ If you use this tag and pull prior to recreating your container, you **WILL** eventually receive a beets upgrade that breaks your plugins and/or config 😭
+- `vX.Y.Z-dev` - latest dev image for beets X.Y.Z
+  - Where builds of upstream refs are tested before being manually promoted to `vX.Y.Z`
+  - Automatically built for the version of beets pinned in [`build-and-publish-dev.yaml`](.github/workflows/build-and-publish-dev.yaml) on merges to this repo's `main` branch
+- `vX.Y.Z-dev-<run_id>.<attempt_id>` – build-specific dev images for traceability
+  - For debugging only, ie. helping me understand an issue you've reported
 
 ## Bundled Packages
 
@@ -93,16 +99,14 @@ beets version 2.5.1
 
 ### Persisting a container
 
-The default command launches the [`web` plugin](https://beets.readthedocs.io/en/stable/plugins/web.html)'s HTTP server. If `$BEETSDIR/config.yaml` doesn't exist, the container loads with `beet -p web web`, but invoking in this fashion overrides any plugins listed in the config.
-
-If no config exists the entrypoint creates one with `web.host: 0.0.0.0`; otherwise it merges in the `web` plugin and ensures the host binding is present before starting the server.
+The default command launches the [`web` plugin](https://beets.readthedocs.io/en/stable/plugins/web.html)'s HTTP server. If no config exists, the entrypoint creates one with `web.host: 0.0.0.0` (required to reach the web UI from outside the container); otherwise it will **MODIFY** your config before starting the server by enabling the `web` plugin and ensuring the host binding is present.
 
 ```bash
 $ docker run -d --rm --name beets \
   -p 8337:8337 \
   -v "$(pwd)/config:/config" \
   -v "$(pwd)/library:/library" \
-  treyturner/beets:v2.5.1
+  ghcr.io/treyturner/beets:v2.5.1
 
 $ docker logs beets
  * Serving Flask app 'beetsplug.web'
@@ -125,8 +129,11 @@ beets version 2.3.1
 You can add `sqlite` to the container to debug or resolve problems with the beets database.
 
 ```bash
+# If container isn't running...
+docker run -it --rm --name beets ghcr.io/treyturner/beets:v2.5.1 bash -c 'apk add --no-cache sqlite && bash'
+
 # With container running...
-docker exec -it --rm beets bash -c 'apk add --no-cache sqlite && bash'
+docker exec -it beets bash -c 'apk add --no-cache sqlite && bash'
 
 ```
 
@@ -134,7 +141,7 @@ docker exec -it --rm beets bash -c 'apk add --no-cache sqlite && bash'
 
 Beets is extremely configurable; you'll want to read the [usage](https://beets.readthedocs.io/en/stable/reference/cli.html) and [configuration](https://beets.readthedocs.io/en/stable/reference/config.html) docs on how to create a `config.yaml` to put in `/config` and run the CLI to manage your library.
 
-Make sure to set the `directory` setting in your config (e.g. `/music`) to match whatever mount you provide.
+Make sure to set the `directory` setting in your config (e.g. `/library`) to match whatever mount you provide.
 
 ## Building Locally
 
@@ -151,6 +158,10 @@ Supported build args:
 - `APK_BUILD_DEPS`, `APK_RUNTIME_EXTRAS`: space-separated Alpine packages.
 - `PIP_EXTRAS` - space-separated Python packages (wheels) to bundle alongside beets.
 
+## Contributing
+
+I made this because I needed it. Questions, issue reports, and PRs are welcome and appreciated, or feel free to fork and make it more your own.
+
 ## License
 
-Apache 2.0. See `LICENSE` for details.
+Licensed via [The Unlicense](LICENSE).

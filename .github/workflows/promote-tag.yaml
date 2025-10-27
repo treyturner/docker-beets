@@ -1,50 +1,46 @@
-name: Promote tags
+name: Promote dev version tag to release version tag
+description: Promote vX.Y.Z-dev (built via the dev workflow) to vX.Y.Z and optional aliases
 
 on:
   workflow_dispatch:
     inputs:
-      source_tag:
-        description: Existing image tag to promote (e.g., v1.6.0)
+      release-version:
+        description: "Targeted release version tag (e.g. 'v2.5.1')"
         type: string
         required: true
-      promote_latest:
-        description: Promote tag as latest
+      promote-latest:
+        description: "Also promote to 'latest' tag (only enable if promoting the newest beets release)"
         type: boolean
-        default: false
-      promote_stable:
-        description: Promote tag as stable
-        type: boolean
+        required: false
         default: false
 
 jobs:
-  promote:
+  promote-tag:
     runs-on: ubuntu-latest
     env:
       PROJECT_NAME: beets
       DOCKERHUB_REPOSITORY: beets
     steps:
       - name: Validate selections
+        shell: bash -euo pipefail {0}
         id: prepare
         env:
-          PROMOTE_LATEST: ${{ inputs.promote_latest }}
-          PROMOTE_STABLE: ${{ inputs.promote_stable }}
+          RELEASE_VERSION: ${{ inputs.release-version }}
+          PROMOTE_LATEST: ${{ inputs.promote-latest }}
         run: |
-          set -euo pipefail
-
-          tags=()
-          if [ "${PROMOTE_LATEST}" = "true" ]; then
-            tags+=("latest")
-          fi
-          if [ "${PROMOTE_STABLE}" = "true" ]; then
-            tags+=("stable")
-          fi
-
-          if [ "${#tags[@]}" -eq 0 ]; then
-            echo "Select at least one tag to promote (latest and/or stable)." >&2
+          if ! [[ "$RELEASE_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::RELEASE_VERSION must match v<digit>.<digit>.<digit> (e.g. v2.5.1)"
             exit 1
+          fi
+          source_tag="${RELEASE_VERSION}-dev"
+          tags=("${RELEASE_VERSION}")
+
+          if [[ "${PROMOTE_LATEST}" == "true" ]]; then
+            tags+=("latest")
           fi
 
           {
+            printf 'source-tag=%s\n' "${source_tag}"
             printf 'tags<<EOF\n'
             for tag in "${tags[@]}"; do
               printf '%s\n' "$tag"
@@ -68,18 +64,16 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Promote tags
+        shell: bash -euo pipefail {0}
         env:
           DOCKERHUB_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
-          DOCKERHUB_REPOSITORY: ${{ env.DOCKERHUB_REPOSITORY }}
           PROJECT_NAME: ${{ env.PROJECT_NAME }}
           GH_OWNER: ${{ github.repository_owner }}
-          SOURCE_TAG: ${{ inputs.source_tag }}
+          SOURCE_TAG: ${{ steps.prepare.outputs.source-tag }}
           TARGET_TAGS: ${{ steps.prepare.outputs.tags }}
         run: |
-          set -euo pipefail
-
           owner_lower=$(printf '%s' "$GH_OWNER" | tr '[:upper:]' '[:lower:]')
-          hub_source="${DOCKERHUB_USERNAME}/${DOCKERHUB_REPOSITORY}:${SOURCE_TAG}"
+          hub_source="${DOCKERHUB_USERNAME}/${PROJECT_NAME}:${SOURCE_TAG}"
           ghcr_source="ghcr.io/${owner_lower}/${PROJECT_NAME}:${SOURCE_TAG}"
 
           mkdir -p tags
@@ -96,7 +90,7 @@ jobs:
 
             echo "Promoting DockerHub tag: ${hub_source} -> ${tag}"
             docker buildx imagetools create \
-              --tag "${DOCKERHUB_USERNAME}/${DOCKERHUB_REPOSITORY}:${tag}" \
+              --tag "${DOCKERHUB_USERNAME}/${PROJECT_NAME}:${tag}" \
               "${hub_source}"
 
             echo "Promoting GHCR tag: ${ghcr_source} -> ${tag}"

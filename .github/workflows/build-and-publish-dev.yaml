@@ -3,8 +3,11 @@ name: Build and publish dev
 on:
   push:
     branches: [main]
-  pull_request:
-    types: ['open', 'synchronize']
+  workflow_dispatch:
+    inputs:
+      upstream-ref:
+        required: false
+        type: string
 
 jobs:
   build-and-publish-dev:
@@ -16,12 +19,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Build and publish
-        uses: ./.github/actions/build-and-publish
+      - name: Build
+        id: build
+        uses: ./.github/actions/build
+        with:
+          label: 'dev'
+          repos: |
+            ghcr.io/treyturner/beets
+            docker.io/treyturner/beets
+          upstream-ref: ${{ inputs.upstream-ref || 'v2.5.1' }}
+
+      - name: Publish
+        uses: ./.github/actions/publish
         with:
           dockerhub-username: ${{ vars.DOCKERHUB_USERNAME }}
           dockerhub-password: ${{ secrets.DOCKERHUB_TOKEN }}
           github-token: ${{ github.token }}
-          label: ${{ github.event_name == 'push' && 'dev' || format('pr{0}', github.event.pull_request.number) }}
-          repos: ${{ github.event_name == 'push' && format('{0}\n{1}', 'ghcr.io/treyturner/beets', 'docker.io/treyturner/beets') || '' }}
-          upstream-ref: v2.5.1
+          refs: ${{ steps.build.outputs.refs }}

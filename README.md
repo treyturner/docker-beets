@@ -56,21 +56,21 @@ handles UID/GID mapping at runtime. Images published to Docker Hub and GHCR.
 
 ### Environment variables
 
-|       Variable        |                           Description                          |  Default  |
-| :-------------------: | :------------------------------------------------------------: | :-------: |
-|        `PUID`         |          Numeric user ID that the entrypoint creates           |   `99`    |
-|        `PGID`         |          Numeric group ID that the entrypoint creates          |   `100`   |
-|        `UMASK`        |                Mask applied before spawning beets              |  `0002`   |
-|      `BEETSDIR`       |                     Path to the beets config                   | `/config` |
-| `RUNTIME_APK_PACKAGES`| Space-separated list of Alpine packages to install at runtime  |  *(none)* |
-| `RUNTIME_PIP_PACKAGES`| Space-separated list of Python packages to install at runtime  |  *(none)* |
+|        Variable        |                                                      Description                                                       |  Default  |
+| :--------------------: | :--------------------------------------------------------------------------------------------------------------------: | :-------: |
+|         `PUID`         |                                      Numeric user ID that the entrypoint creates                                       |   `99`    |
+|         `PGID`         |                                      Numeric group ID that the entrypoint creates                                      |   `100`   |
+|        `UMASK`         |                                           Mask applied before spawning beets                                           |  `0002`   |
+|       `BEETSDIR`       |                                                Path to the beets config                                                | `/config` |
+| `RUNTIME_APK_PACKAGES` | Space-separated list of Alpine packages<br>to install at runtime ([note!](#installing-additional-packages-at-runtime)) | _(none)_  |
+| `RUNTIME_PIP_PACKAGES` | Space-separated list of Python packages<br>to install at runtime ([note!](#installing-additional-packages-at-runtime)) | _(none)_  |
 
 ### Bind mounts
 
 | Container Path |                             Description                             |
 | :------------: | :-----------------------------------------------------------------: |
 |   `/config`    |  Beets configuration (`config.yaml`), state, and plugin artifacts   |
-|   *(custom)*   | Library mount(s) of your choice, e.g. `-v /mnt/user/music:/library` |
+|   _(custom)_   | Library mount(s) of your choice, e.g. `-v /mnt/user/music:/library` |
 
 ### Running one-off commands
 
@@ -130,9 +130,10 @@ beets version 2.3.1
 
 ### Installing additional packages at runtime
 
+**⚠️ Note:** Runtime package installation happens during **every container start**, adding several seconds or more to startup time and requiring network access. For packages you always need, consider creating a custom image using the build-time `APK_RUNTIME_EXTRAS` and `PIP_EXTRAS` build arguments instead.
+
 You can install additional Alpine (apk) or Python (pip) packages at container startup using the `RUNTIME_APK_PACKAGES` and `RUNTIME_PIP_PACKAGES` environment variables. This is useful for adding dependencies needed by specific plugins or custom workflows without rebuilding the image.
 
-**⚠️ Note:** Runtime package installation happens at **every container start**, adding several seconds or more to startup time and requiring network access. For packages you always need, consider creating a custom image using the build-time `APK_RUNTIME_EXTRAS` and `PIP_EXTRAS` build arguments instead.
 
 ```bash
 # Install some additional packages before starting
@@ -144,7 +145,6 @@ $ docker run -d --name beets \
   -v "$(pwd)/library:/library" \
   ghcr.io/treyturner/beets:v2.5.1
 ```
-
 
 ### Database trouble?
 

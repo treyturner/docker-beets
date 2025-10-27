@@ -15,6 +15,8 @@ jobs:
     permissions:
       contents: read
       packages: write
+    env:
+      BEETS_VERSION: "2.5.1"
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -27,7 +29,13 @@ jobs:
           repos: |
             ghcr.io/treyturner/beets
             docker.io/treyturner/beets
-          upstream-ref: ${{ inputs.upstream-ref || 'v2.5.1' }}
+          upstream-ref: ${{ inputs.upstream-ref || format('v{0}', env.BEETS_VERSION) }}
+
+      - name: Test
+        uses: ./.github/actions/test
+        with:
+          image-ref: ${{ steps.build.outputs.primary-ref }}
+          beets-version: ${{ env.BEETS_VERSION }}
 
       - name: Publish
         uses: ./.github/actions/publish

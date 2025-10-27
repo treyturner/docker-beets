@@ -23,5 +23,7 @@ jobs:
           upstream-ref: v${{ env.BEETS_VERSION }}
 
       - name: Test
-        shell: bash -euo pipefail {0}
-        run: docker run --rm ${{ steps.build.outputs.primary-ref }} beet --version | grep -q 'beets version ${{ env.BEETS_VERSION }}'
+        uses: ./.github/actions/test
+        with:
+          image-ref: ${{ steps.build.outputs.primary-ref }}
+          beets-version: ${{ env.BEETS_VERSION }}

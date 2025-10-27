@@ -1,0 +1,75 @@
+name: Test beets Docker image
+description: Run tests to verify the beets Docker image works correctly
+
+inputs:
+  image-ref:
+    description: 'Docker image reference to test'
+    required: true
+  beets-version:
+    description: 'Expected beets version'
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Test beets version
+      shell: bash -euo pipefail {0}
+      run: |
+        echo "Testing beets version..."
+        docker run --rm ${{ inputs.image-ref }} beet --version | grep -q 'beets version ${{ inputs.beets-version }}'
+        echo "✅ Version test passed"
+
+    - name: Test UMASK environment variable
+      shell: bash -euo pipefail {0}
+      run: |
+        echo "Testing UMASK support..."
+
+        # Create a temporary directory for testing
+        test_dir=$(mktemp -d)
+        trap "rm -rf ${test_dir}" EXIT
+
+        # Test with UMASK=0077 (more restrictive - owner only)
+        docker run --rm \
+          -e UMASK=0077 \
+          -v "${test_dir}:/config" \
+          ${{ inputs.image-ref }} \
+          sh -c 'touch /config/test-file-0077.txt && stat -c "%a" /config/test-file-0077.txt'
+
+        # Verify file was created with 0600 permissions (0777 - 0077 = 0700 for dirs, 0666 - 0077 = 0600 for files)
+        perms=$(stat -c "%a" "${test_dir}/test-file-0077.txt")
+        if [ "$perms" != "600" ]; then
+          echo "❌ UMASK=0077 test failed: expected permissions 600, got ${perms}"
+          exit 1
+        fi
+        echo "✅ UMASK=0077 test passed (permissions: ${perms})"
+
+        # Test with UMASK=0022 (standard - owner rw, group/other r)
+        docker run --rm \
+          -e UMASK=0022 \
+          -v "${test_dir}:/config" \
+          ${{ inputs.image-ref }} \
+          sh -c 'touch /config/test-file-0022.txt && stat -c "%a" /config/test-file-0022.txt'
+
+        # Verify file was created with 0644 permissions (0666 - 0022 = 0644)
+        perms=$(stat -c "%a" "${test_dir}/test-file-0022.txt")
+        if [ "$perms" != "644" ]; then
+          echo "❌ UMASK=0022 test failed: expected permissions 644, got ${perms}"
+          exit 1
+        fi
+        echo "✅ UMASK=0022 test passed (permissions: ${perms})"
+
+        # Test default UMASK (0002 - owner/group rw, other r)
+        docker run --rm \
+          -v "${test_dir}:/config" \
+          ${{ inputs.image-ref }} \
+          sh -c 'touch /config/test-file-default.txt && stat -c "%a" /config/test-file-default.txt'
+
+        # Verify file was created with 0664 permissions (0666 - 0002 = 0664)
+        perms=$(stat -c "%a" "${test_dir}/test-file-default.txt")
+        if [ "$perms" != "664" ]; then
+          echo "❌ Default UMASK test failed: expected permissions 664, got ${perms}"
+          exit 1
+        fi
+        echo "✅ Default UMASK test passed (permissions: ${perms})"
+
+        echo "✅ All UMASK tests passed"

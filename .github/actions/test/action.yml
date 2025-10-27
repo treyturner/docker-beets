@@ -16,7 +16,12 @@ runs:
       shell: bash -euo pipefail {0}
       run: |
         echo "Testing beets version..."
-        docker run --rm ${{ inputs.image-ref }} beet --version | grep -q 'beets version ${{ inputs.beets-version }}'
+        output="$(docker run --rm ${{ inputs.image-ref }} beet --version)"
+        if ! grep -q 'beets version ${{ inputs.beets-version }}' <<< "${output}"; then
+          echo "❌ Unexpected beets version output:"
+          echo "${output}"
+          exit 1
+        fi
         echo "✅ Version test passed"
 
     - name: Test UMASK environment variable

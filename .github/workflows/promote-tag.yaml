@@ -19,7 +19,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       PROJECT_NAME: beets
-      DOCKERHUB_REPOSITORY: beets
     steps:
       - name: Validate selections
         shell: bash -euo pipefail {0}

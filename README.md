@@ -29,9 +29,9 @@ handles UID/GID mapping at runtime. Images published to Docker Hub and GHCR.
 
 ### Beets + plugins:
 
-- `beets[discogs,beatport]`
-- `beets-beatport4` (bundled only for beets `v2.3.x`)
-- `beets-filetote` (bundled only for beets `v2.3.x`)
+- `beets[discogs]`
+- `beets-beatport4`
+- `beets-filetote` - only for beets `v2.3.x` ([issue](https://github.com/gtronset/beets-filetote/issues/211))
 - `git+https://github.com/edgars-supe/beets-importreplace.git`
 
 ### Python packages:

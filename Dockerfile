@@ -144,6 +144,7 @@ RUN apk add --no-cache \
       bash \
       chromaprint \
       ffmpeg \
+      imagemagick \
       jq \
       libffi \
       openssl \

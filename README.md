@@ -49,6 +49,7 @@ handles UID/GID mapping at runtime. Images published to Docker Hub and GHCR.
 
 - `ffmpeg`
 - `chromaprint` (provides `fpcalc` required by the `chroma` plugin)
+- `imagemagick`
 - `jq`
 - `yq`
 

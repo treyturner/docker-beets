@@ -7,7 +7,7 @@
 
 plugins:
   - albumtypes
-  #- beatport4  # Currently not compatible with beets >= 2.4.0
+  - beatport4
   - bucket
   - chroma
   - clutter

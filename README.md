@@ -16,9 +16,7 @@ handles UID/GID mapping at runtime.
   - Need a version not currently posted? Open an issue and I'd be happy to build and publish it.
 - `latest` - the latest version of beets I manually promoted after deeming it stable (YMMV)
   - **Discouraged**, but provided for convenience if you don't require a specific version of beets
-
   - ⚠️ If you use this tag, pull, and recreate your container, you **WILL** eventually upgrade beets to a version that breaks one or more plugins and/or your config 😭
-
 - `vX.Y.Z-dev` - latest dev image for beets X.Y.Z
   - Where builds of upstream refs are tested before being manually promoted to `vX.Y.Z`
   - Automatically built for the version of beets pinned in [`build-and-publish-dev.yaml`](.github/workflows/build-and-publish-dev.yaml) on merges to this repo's `main` branch
@@ -29,11 +27,7 @@ handles UID/GID mapping at runtime.
 
 ### Beets + plugins:
 
-- The ubiquitous [`beets`](https://github.com/beetbox/beets), with extras:
-  - [`chroma`](https://beets.readthedocs.io/en/latest/plugins/chroma.html)
-  - [`discogs`](https://beets.readthedocs.io/en/latest/plugins/discogs.html)
-  - [`fetchart`](https://beets.readthedocs.io/en/latest/plugins/fetchart.html)
-  - [`lyrics`](https://beets.readthedocs.io/en/latest/plugins/lyrics.html)
+- The ubiquitous [`beets`](https://github.com/beetbox/beets)
 - [Samik081](https://github.com/Samik081)'s [`beatport4`](https://github.com/Samik081/beets-beatport4)
 - [gtronset](https://github.com/gtronset)'s [`filetote`](https://github.com/gtronset/beets-filetote)
   - Only for beets `v2.3.x` [at the moment](https://github.com/gtronset/beets-filetote/issues/211)
@@ -41,13 +35,15 @@ handles UID/GID mapping at runtime.
 
 ### Python packages:
 
-- [`requests`](https://requests.readthedocs.io/en/latest/)
-- [`requests_oauthlib`](https://requests-oauthlib.readthedocs.io/en/latest/)
-- [`beautifulsoup4`](https://beautiful-soup-4.readthedocs.io/en/latest/)
-- [`pylast`](https://github.com/pylast/pylast)
+- [`requests`](https://requests.readthedocs.io/en/latest/) (for [`lyrics`](https://beets.readthedocs.io/en/latest/plugins/lyrics.html), [`fetchart`](https://beets.readthedocs.io/en/latest/plugins/fetchart.html), ...)
+- [`requests_oauthlib`](https://requests-oauthlib.readthedocs.io/en/latest/) (for [`beatport4`](https://github.com/Samik081/beets-beatport4))
+- [`beautifulsoup4`](https://beautiful-soup-4.readthedocs.io/en/latest/) (for [`lyrics`](https://beets.readthedocs.io/en/latest/plugins/lyrics.html))
+- [`pyacoustid`](https://github.com/beetbox/pyacoustid) (for [`chroma`](https://beets.readthedocs.io/en/latest/plugins/chroma.html))
+- [`pylast`](https://github.com/pylast/pylast) (for [`lastgenre`](https://beets.readthedocs.io/en/latest/plugins/lastgenre.html))
+- [`python3-discogs-client`](https://github.com/joalla/discogs_client) (for [`discogs`](https://beets.readthedocs.io/en/stable/plugins/discogs.html))
 - [`langdetect`](https://github.com/fedelopez77/langdetect) (for [`lyrics`](https://beets.readthedocs.io/en/latest/plugins/lyrics.html))
 - [`flask`](https://flask.palletsprojects.com/en/stable/) (for [`web`](https://beets.readthedocs.io/en/latest/plugins/web.html))
-- [`Pillow`](https://github.com/python-pillow/Pillow) (for [`fetchart`](https://beets.readthedocs.io/en/latest/plugins/fetchart.html), [`embedart`](https://beets.readthedocs.io/en/latest/plugins/embedart.html), etc.)
+- [`Pillow`](https://github.com/python-pillow/Pillow) (for [`fetchart`](https://beets.readthedocs.io/en/latest/plugins/fetchart.html), [`embedart`](https://beets.readthedocs.io/en/latest/plugins/embedart.html), ...)
 
 ### Runtime tools
 
@@ -161,7 +157,6 @@ docker run -it --rm -w /config -e RUNTIME_APK_PACKAGES="sqlite" ghcr.io/treyturn
 
 # With container running...
 docker exec -it -w /config beets bash -c 'apk add --no-cache sqlite && sqlite3 library.db'
-
 ```
 
 ## Configuration

@@ -20,11 +20,9 @@ ARG BEETS_REF=v2.5.1
 ARG APK_BUILD_DEPS=""
 # Space-separated Python package sources bundled by default alongside beets
 # (git URLs allowed; leave blank to skip)
-ARG DEFAULT_PIP_SOURCES="beets-beatport4 beets-filetote git+https://github.com/edgars-supe/beets-importreplace.git requests requests_oauthlib beautifulsoup4 pylast langdetect flask Pillow"
+ARG DEFAULT_PIP_SOURCES="beets-beatport4 beets-filetote git+https://github.com/edgars-supe/beets-importreplace.git requests requests_oauthlib beautifulsoup4 pyacoustid pylast python3-discogs-client langdetect flask Pillow"
 # Space-separated distribution names installed in the runtime stage
-ARG DEFAULT_PIP_PACKAGES="beets-beatport4 beets-filetote beets-importreplace requests requests_oauthlib beautifulsoup4 pylast langdetect flask Pillow"
-# Comma-separated beets extras to enable (controls optional dependencies)
-ARG BEETS_PIP_EXTRAS="chroma,discogs,fetchart,lyrics"
+ARG DEFAULT_PIP_PACKAGES="beets-beatport4 beets-filetote beets-importreplace requests requests_oauthlib beautifulsoup4 pyacoustid pylast python3-discogs-client langdetect flask Pillow"
 # Space-separated user Python packages to bundle (wheels built & installed)
 ARG USER_PIP_PACKAGES=""
 # -----------------------------------------------------------
@@ -49,16 +47,10 @@ RUN mkdir -p /wheels
 # Fetch beets source at the requested ref
 RUN git clone --depth 1 --branch "${BEETS_REF}" https://github.com/beetbox/beets.git
 
-# Build wheels for beets (with selected extras) and any requested packages into /wheels
+# Build wheels for beets and any requested packages into /wheels
 # Building wheels up front guarantees availability in the final stage
 RUN set -eux; \
-    extras="${BEETS_PIP_EXTRAS}"; \
-    if [ -n "${extras}" ]; then \
-      beets_target="./beets[${extras}]"; \
-    else \
-      beets_target="./beets"; \
-    fi; \
-    python3 -m pip wheel --wheel-dir /wheels "${beets_target}"; \
+    python3 -m pip wheel --wheel-dir /wheels ./beets; \
     beets_wheel=''; \
     for wheel in /wheels/beets-*.whl; do \
       beets_wheel="${wheel}"; \
@@ -147,18 +139,11 @@ RUN apk add --no-cache \
       ${APK_RUNTIME_EXTRAS}
 
 # Bring in the built wheels and install without hitting the network
-ARG DEFAULT_PIP_PACKAGES="beets-beatport4 beets-filetote beets-importreplace requests requests_oauthlib beautifulsoup4 pyacoustid pylast langdetect flask Pillow"
-ARG BEETS_PIP_EXTRAS="discogs"
+ARG DEFAULT_PIP_PACKAGES="beets-beatport4 beets-filetote beets-importreplace requests requests_oauthlib beautifulsoup4 pyacoustid pylast python3-discogs-client langdetect flask Pillow"
 ARG USER_PIP_PACKAGES=""
 COPY --from=builder /wheels /wheels
 RUN set -eux; \
-    extras="${BEETS_PIP_EXTRAS}"; \
-    if [ -n "${extras}" ]; then \
-      beets_target="beets[${extras}]"; \
-    else \
-      beets_target="beets"; \
-    fi; \
-    python3 -m pip install --no-index --find-links=/wheels "${beets_target}"; \
+    python3 -m pip install --no-index --find-links=/wheels beets; \
     default_packages="${DEFAULT_PIP_PACKAGES}"; \
     if [ -f /wheels/.default-packages ]; then \
       default_packages="$(tr '\n' ' ' < /wheels/.default-packages)"; \

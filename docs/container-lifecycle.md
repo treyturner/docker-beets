@@ -10,9 +10,9 @@ This diagram highlights when each build argument or runtime environment variable
 flowchart TD
     A1["Build Args<br/>PYTHON_VERSION<br/>PYTHON_BASE_SUFFIX"] --> B0
     A2["Build Arg<br/>APK_BUILD_DEPS"] --> B1
-    A3["Build Args<br/>BEETS_REF<br/>BEETS_PIP_EXTRAS<br/>DEFAULT_PIP_SOURCES<br/>DEFAULT_PIP_PACKAGES<br/>USER_PIP_PACKAGES"] --> B2
+    A3["Build Args<br/>BEETS_REF<br/>DEFAULT_PIP_SOURCES<br/>DEFAULT_PIP_PACKAGES<br/>USER_PIP_PACKAGES"] --> B2
     A4["Build Arg<br/>APK_RUNTIME_EXTRAS"] --> R1
-    A5["Build Args<br/>BEETS_PIP_EXTRAS<br/>DEFAULT_PIP_PACKAGES<br/>USER_PIP_PACKAGES"] --> R2
+    A5["Build Args<br/>DEFAULT_PIP_PACKAGES<br/>USER_PIP_PACKAGES"] --> R2
     A6["Env. Vars<br/>PUID<br/>PGID<br/>UMASK"] --> E1
     A7["Env. Vars<br/>RUNTIME_APK_PACKAGES<br/>RUNTIME_PIP_PACKAGES"] --> E2
 

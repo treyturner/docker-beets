@@ -1,9 +1,17 @@
 # syntax=docker/dockerfile:1.7
-ARG PYTHON_VERSION=3.12
-ARG PYTHON_BASE_SUFFIX=-alpine
-FROM --platform=$BUILDPLATFORM python:${PYTHON_VERSION}${PYTHON_BASE_SUFFIX} AS builder
+ARG PYTHON_VERSION=3.12 \
+    PYTHON_BASE_SUFFIX=alpine
 
-LABEL org.opencontainers.image.source="https://github.com/beetbox/beets"
+FROM --platform=$BUILDPLATFORM python:${PYTHON_VERSION}${PYTHON_BASE_SUFFIX:+-${PYTHON_BASE_SUFFIX#-}} AS builder
+
+LABEL \
+  org.opencontainers.image.title="beets" \
+  org.opencontainers.image.description="A customizable Docker image for beets - the music library manager and tagger." \
+  org.opencontainers.image.url="https://github.com/beetbox/beets" \
+  org.opencontainers.image.source="https://github.com/beetbox/beets" \
+  org.opencontainers.image.licenses="MIT" \
+  org.opencontainers.image.documentation="https://beets.readthedocs.io/en/latest/" \
+  org.opencontainers.image.vendor="Trey Turner"
 
 # -------- Build-time args you can override at build --------
 # Git ref (tag/branch/sha) to build from the beets repo
@@ -12,13 +20,13 @@ ARG BEETS_REF=v2.5.1
 ARG APK_BUILD_DEPS=""
 # Space-separated Python package sources bundled by default alongside beets
 # (git URLs allowed; leave blank to skip)
-ARG DEFAULT_PIP_SOURCES="beets-beatport4 beets-filetote git+https://github.com/edgars-supe/beets-importreplace.git requests requests_oauthlib beautifulsoup4 pyacoustid pylast langdetect flask Pillow"
+ARG DEFAULT_PIP_SOURCES="beets-beatport4 beets-filetote git+https://github.com/edgars-supe/beets-importreplace.git requests requests_oauthlib beautifulsoup4 pylast langdetect flask Pillow"
 # Space-separated distribution names installed in the runtime stage
-ARG DEFAULT_PIP_PACKAGES="beets-beatport4 beets-filetote beets-importreplace requests requests_oauthlib beautifulsoup4 pyacoustid pylast langdetect flask Pillow"
+ARG DEFAULT_PIP_PACKAGES="beets-beatport4 beets-filetote beets-importreplace requests requests_oauthlib beautifulsoup4 pylast langdetect flask Pillow"
 # Comma-separated beets extras to enable (controls optional dependencies)
-ARG BEETS_PIP_EXTRAS="discogs"
-# Space-separated extra Python packages to build as wheels alongside beets (user override)
-ARG PIP_EXTRAS=""
+ARG BEETS_PIP_EXTRAS="chroma,discogs,fetchart,lyrics"
+# Space-separated user Python packages to bundle (wheels built & installed)
+ARG USER_PIP_PACKAGES=""
 # -----------------------------------------------------------
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -61,36 +69,19 @@ RUN set -eux; \
       exit 1; \
     fi; \
     beets_basename="$(basename "${beets_wheel}")"; \
-    beets_version="${beets_basename#beets-}"; \
-    beets_version="${beets_version%%.whl}"; \
-    beets_version="${beets_version%%-py*}"; \
+    beets_version="$(printf '%s' "${beets_basename}" | sed -E 's/^beets-([0-9]+(\.[0-9]+)*)-.*/\1/')"; \
+    if [ -z "${beets_version}" ] || [ "${beets_version}" = "${beets_basename}" ]; then \
+      echo "Unable to parse beets version from wheel name: ${beets_basename}" >&2; \
+      exit 1; \
+    fi; \
     default_sources="${DEFAULT_PIP_SOURCES}"; \
     default_packages="${DEFAULT_PIP_PACKAGES}"; \
-    classification="ok"; \
-    clean_version="$(printf '%s' "${beets_version}" | tr -cd '0-9.')"; \
-    save_IFS=${IFS}; IFS=.; set -- ${clean_version}; IFS=${save_IFS}; \
-    v_major=${1:-0}; \
-    v_minor=${2:-0}; \
-    v_patch=${3:-0}; \
-    if [ "${v_major}" -gt 2 ]; then \
-      classification="disable_high"; \
-    elif [ "${v_major}" -lt 2 ]; then \
-      classification="disable_low"; \
-    else \
-      if [ "${v_minor}" -gt 4 ]; then \
-        classification="disable_high"; \
-      elif [ "${v_minor}" -lt 3 ]; then \
-        classification="disable_low"; \
-      elif [ "${v_minor}" -eq 4 ]; then \
-        classification="disable_high"; \
-      fi; \
-    fi; \
-    if [ "${classification}" != "ok" ]; then \
-      if [ "${classification}" = "disable_high" ]; then \
-        echo "Disabling beets-filetote (require beets < 2.4.0)" >&2; \
-      else \
-        echo "Disabling beets-filetote (require beets >= 2.3.0)" >&2; \
-      fi; \
+    case "${beets_version}" in \
+      2.3.*) keep_filetote=true ;; \
+      *) keep_filetote=false ;; \
+    esac; \
+    if [ "${keep_filetote}" != "true" ]; then \
+      echo "Disabling beets-filetote (requires beets >= 2.3.0 and < 2.4.0)" >&2; \
       filtered=''; \
       for pkg in ${default_sources}; do \
         if [ "${pkg}" = "beets-filetote" ] || [ -z "${pkg}" ]; then \
@@ -113,8 +104,8 @@ RUN set -eux; \
     if [ -n "${default_sources}" ]; then \
       python3 -m pip wheel --wheel-dir /wheels ${default_sources}; \
     fi; \
-    if [ -n "${PIP_EXTRAS}" ]; then \
-      python3 -m pip wheel --wheel-dir /wheels ${PIP_EXTRAS}; \
+    if [ -n "${USER_PIP_PACKAGES}" ]; then \
+      python3 -m pip wheel --wheel-dir /wheels ${USER_PIP_PACKAGES}; \
     fi; \
     printf '%s' "${default_packages}" > /wheels/.default-packages; \
     rm -f /wheels/beets-*.whl; \
@@ -123,7 +114,7 @@ RUN set -eux; \
 
 # ------------------------------------------------------------------------
 
-FROM python:${PYTHON_VERSION}${PYTHON_BASE_SUFFIX} AS runtime
+FROM python:${PYTHON_VERSION}${PYTHON_BASE_SUFFIX:+-${PYTHON_BASE_SUFFIX#-}} AS runtime
 
 # -------- Runtime args you can override at build --------
 # Extra runtime APKs (shared libs/tools your plugins need; e.g., "ffmpeg sqlite")
@@ -133,11 +124,14 @@ ARG CONFIG_DIR=/config
 # --------------------------------------------------------
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     # Runtime-configurable: set user IDs and umask at container start
     PUID=99 \
     PGID=100 \
     UMASK=0002
+
+STOPSIGNAL SIGINT
 
 # Minimal runtime packages + su-exec for dropping privileges
 RUN apk add --no-cache \
@@ -155,7 +149,7 @@ RUN apk add --no-cache \
 # Bring in the built wheels and install without hitting the network
 ARG DEFAULT_PIP_PACKAGES="beets-beatport4 beets-filetote beets-importreplace requests requests_oauthlib beautifulsoup4 pyacoustid pylast langdetect flask Pillow"
 ARG BEETS_PIP_EXTRAS="discogs"
-ARG PIP_EXTRAS=""
+ARG USER_PIP_PACKAGES=""
 COPY --from=builder /wheels /wheels
 RUN set -eux; \
     extras="${BEETS_PIP_EXTRAS}"; \
@@ -172,8 +166,8 @@ RUN set -eux; \
     if [ -n "${default_packages}" ]; then \
       python3 -m pip install --no-index --find-links=/wheels ${default_packages}; \
     fi; \
-    if [ -n "${PIP_EXTRAS}" ]; then \
-      python3 -m pip install --no-index --find-links=/wheels ${PIP_EXTRAS}; \
+    if [ -n "${USER_PIP_PACKAGES}" ]; then \
+      python3 -m pip install --no-index --find-links=/wheels ${USER_PIP_PACKAGES}; \
     fi; \
     rm -rf /wheels
 
@@ -185,6 +179,10 @@ WORKDIR ${CONFIG_DIR}
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 COPY start-web.sh /usr/local/bin/start-web.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh /usr/local/bin/start-web.sh
+
+# Include upstream license for compliance
+RUN install -d /usr/share/licenses/beets
+COPY --from=builder /build/beets/LICENSE /usr/share/licenses/beets/LICENSE
 
 ENV BEETSDIR=${CONFIG_DIR}
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

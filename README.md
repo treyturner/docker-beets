@@ -2,7 +2,7 @@
 
 Packages the upstream [`beetbox/beets`](https://github.com/beetbox/beets)
 music manager on a Alpine base, optional build extras, and an entrypoint that
-handles UID/GID mapping at runtime. Images published to Docker Hub and GHCR.
+handles UID/GID mapping at runtime.
 
 ## Available Images
 
@@ -12,12 +12,12 @@ handles UID/GID mapping at runtime. Images published to Docker Hub and GHCR.
 ### Tag Strategy
 
 - `vX.Y.Z` - manual builds that pin the upstream beets release tag (e.g. `v2.5.1`)
-  - You want one of these. They **ARE** mutable, but always contain the specified version of beets.
+  - You want one of these. They're mutable, but always contain the specified version of beets.
   - Need a version not currently posted? Open an issue and I'd be happy to build and publish it.
-- `latest` - the latest version of beets that I manually promoted after deeming it stable (YMMV)
+- `latest` - the latest version of beets I manually promoted after deeming it stable (YMMV)
   - **Discouraged**, but provided for convenience if you don't require a specific version of beets
 
-  - ⚠️ If you use this tag, pull, and recreate your container, you **WILL** eventually upgrade beets to a version that breaks one or more plugins and/or config 😭
+  - ⚠️ If you use this tag, pull, and recreate your container, you **WILL** eventually upgrade beets to a version that breaks one or more plugins and/or your config 😭
 
 - `vX.Y.Z-dev` - latest dev image for beets X.Y.Z
   - Where builds of upstream refs are tested before being manually promoted to `vX.Y.Z`
@@ -29,29 +29,33 @@ handles UID/GID mapping at runtime. Images published to Docker Hub and GHCR.
 
 ### Beets + plugins:
 
-- `beets[discogs]`
-- `beets-beatport4`
-- `beets-filetote` - only for beets `v2.3.x` ([issue](https://github.com/gtronset/beets-filetote/issues/211))
-- `git+https://github.com/edgars-supe/beets-importreplace.git`
+- The ubiquitous [`beets`](https://github.com/beetbox/beets), with extras:
+  - [`chroma`](https://beets.readthedocs.io/en/latest/plugins/chroma.html)
+  - [`discogs`](https://beets.readthedocs.io/en/latest/plugins/discogs.html)
+  - [`fetchart`](https://beets.readthedocs.io/en/latest/plugins/fetchart.html)
+  - [`lyrics`](https://beets.readthedocs.io/en/latest/plugins/lyrics.html)
+- [Samik081](https://github.com/Samik081)'s [`beatport4`](https://github.com/Samik081/beets-beatport4)
+- [gtronset](https://github.com/gtronset)'s [`filetote`](https://github.com/gtronset/beets-filetote)
+  - Only for beets `v2.3.x` [at the moment](https://github.com/gtronset/beets-filetote/issues/211)
+- [edgars-supe](https://github.com/gtronset)'s [`importreplace`](https://github.com/edgars-supe/beets-importreplace)
 
 ### Python packages:
 
-- `requests`
-- `requests_oauthlib`
-- `beautifulsoup4`
-- `pyacoustid`
-- `pylast`
-- `langdetect`
-- `flask`
-- `Pillow`
+- [`requests`](https://requests.readthedocs.io/en/latest/)
+- [`requests_oauthlib`](https://requests-oauthlib.readthedocs.io/en/latest/)
+- [`beautifulsoup4`](https://beautiful-soup-4.readthedocs.io/en/latest/)
+- [`pylast`](https://github.com/pylast/pylast)
+- [`langdetect`](https://github.com/fedelopez77/langdetect) (for [`lyrics`](https://beets.readthedocs.io/en/latest/plugins/lyrics.html))
+- [`flask`](https://flask.palletsprojects.com/en/stable/) (for [`web`](https://beets.readthedocs.io/en/latest/plugins/web.html))
+- [`Pillow`](https://github.com/python-pillow/Pillow) (for [`fetchart`](https://beets.readthedocs.io/en/latest/plugins/fetchart.html), [`embedart`](https://beets.readthedocs.io/en/latest/plugins/embedart.html), etc.)
 
 ### Runtime tools
 
-- `ffmpeg`
-- `chromaprint` (provides `fpcalc` required by the `chroma` plugin)
-- `imagemagick`
-- `jq`
-- `yq`
+- [`ffmpeg`](https://github.com/FFmpeg/FFmpeg)
+- [`chromaprint`](https://github.com/acoustid/chromaprint) (provides `fpcalc` to [`chroma`](https://beets.readthedocs.io/en/latest/plugins/chroma.html))
+- [`imagemagick`](https://github.com/ImageMagick/ImageMagick)
+- [`jq`](https://github.com/jqlang/jq)
+- [`yq`](https://github.com/mikefarah/yq)
 
 ## Usage
 
@@ -126,12 +130,12 @@ Once started, you can access the UI at `http://ip.of.docker.host:8337`, or start
 ```
 $ docker exec -it beets bash
 2edbccf027b4:/config# beet --version
-beets version 2.3.1
+beets version 2.5.1
 ```
 
 ### Installing additional packages at runtime
 
-**⚠️ Note:** Runtime package installation happens during **every container start**, adding several seconds or more to startup time and requiring network access. For packages you always need, consider creating a custom image using the build-time `APK_RUNTIME_EXTRAS` and `PIP_EXTRAS` build arguments instead.
+**⚠️ Note:** Runtime package installation happens during **every container start**, adding several seconds or more to startup time and requiring network access. For packages you always need, consider creating a custom image using the build-time `APK_RUNTIME_EXTRAS` and `USER_PIP_PACKAGES` build arguments instead.
 
 You can install additional Alpine (apk) or Python (pip) packages at container startup using the `RUNTIME_APK_PACKAGES` and `RUNTIME_PIP_PACKAGES` environment variables. This is useful for adding dependencies needed by specific plugins or custom workflows without rebuilding the image.
 
@@ -175,16 +179,31 @@ docker build \
   .
 ```
 
-Supported build args:
+### Supported build args
 
-- `BEETS_REF`: The git ref of [`beetbox/beets`](https://github.com/beetbox/beets) to build (tag, branch, or SHA)
-- `APK_BUILD_DEPS`, `APK_RUNTIME_EXTRAS`: space-separated Alpine packages.
-- `PIP_EXTRAS` - space-separated Python packages (wheels) to bundle alongside beets.
+| Build Arg                | Description                                                                                                                        |
+|--------------------------|------------------------------------------------------------------------------------------------------------------------------------|
+| `PYTHON_VERSION`         | Python version to use, e.g. `3.12`                                                                                                |
+| `PYTHON_BASE_SUFFIX`     | Python base image suffix, e.g. `alpine`                                                                                            |
+| `BEETS_REF`              | The git ref of [`beetbox/beets`](https://github.com/beetbox/beets) to build (tag, branch, or SHA)                                 |
+| `APK_BUILD_DEPS`         | Space-separated list of Alpine packages to install at build time                                                                   |
+| `APK_RUNTIME_EXTRAS`     | Space-separated list of Alpine packages to include in the final image                                                             |
+| `USER_PIP_PACKAGES`      | Space-separated list of user Python packages (wheels). Must already exist on PyPI or a compatible index so they can be wheeled offline. |
+
+### Diagram of Build Stages, Args, and Environment Variables
+
+![Beets Container Lifecycle](docs/container-lifecycle.svg)
 
 ## Contributing
 
-I made this because I needed it. Questions, issue reports, and PRs are welcome and appreciated, or feel free to fork and make it more your own.
+I made this because I needed it. Issue reports, PRs, suggestions and questions are welcome and appreciated, or feel free to fork and make it more your own.
 
 ## License
 
-Licensed via [The Unlicense](LICENSE).
+Build scripts/logic licensed via [The Unlicense](LICENSE).
+
+Bundled software includes additional licenses:
+- [`beets`](https://github.com/beetbox/beets) (MIT) — copy available in the image at `/usr/share/licenses/beets/LICENSE`.
+- Alpine packages such as `ffmpeg`, `chromaprint`, and others ship their respective licenses in `/usr/share/licenses/`.
+
+Review those notices to ensure your downstream use complies, especially with GPL/LGPL components like `ffmpeg`.

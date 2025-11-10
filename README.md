@@ -185,9 +185,61 @@ docker build \
 | `APK_RUNTIME_EXTRAS`     | Space-separated list of Alpine packages to include in the final image                                                             |
 | `USER_PIP_PACKAGES`      | Space-separated list of user Python packages (wheels). Must already exist on PyPI or a compatible index so they can be wheeled offline. |
 
-### Diagram of Build Stages, Args, and Environment Variables
+### Container Lifecycle Overview
 
-![Beets Container Lifecycle](docs/container-lifecycle.svg)
+Where each build argument and environment variable applies during the image build and container startup sequence.
+
+```mermaid
+%%{init: {'theme':'base','themeVariables':{
+    'primaryColor':'#0f172a',
+    'primaryBorderColor':'#94a3b8',
+    'primaryTextColor':'#f8fafc',
+    'secondaryColor':'#1e293b',
+    'tertiaryColor':'#e2e8f0',
+    'lineColor':'#2563eb',
+    'fontFamily':'"Inter","Segoe UI",sans-serif'
+  }}}%%
+flowchart TD
+  A1["<strong>Build Args</strong><br/>PYTHON_VERSION<br/>PYTHON_BASE_SUFFIX"] --> B0
+  A2["<strong>Build Arg</strong><br/>APK_BUILD_DEPS"] --> B1
+  A3["<strong>Build Args</strong><br/>BEETS_REF<br/>DEFAULT_PIP_SOURCES<br/>DEFAULT_PIP_PACKAGES<br/>USER_PIP_PACKAGES"] --> B2
+  A4["<strong>Build Arg</strong><br/>APK_RUNTIME_EXTRAS"] --> R1
+  A5["<strong>Build Args</strong><br/>DEFAULT_PIP_PACKAGES<br/>USER_PIP_PACKAGES"] --> R2
+  A6["<strong>Env. Vars</strong><br/>PUID<br/>PGID<br/>UMASK"] --> E1
+  A7["<strong>Env. Vars</strong><br/>RUNTIME_APK_PACKAGES<br/>RUNTIME_PIP_PACKAGES"] --> E2
+
+  subgraph Docker Build
+    direction LR
+    subgraph Builder Stage
+      B0["Select Python Base Image"] --> B1
+      B1["apk add build deps<br/>+ APK_BUILD_DEPS"] --> B2
+      B2["pip wheel into /wheels:<br/>beets, default srcs + pkgs<br/>+ USER_PIP_PACKAGES"]
+    end
+
+    subgraph Runtime Stage
+      B2 --> R1["apk add runtime deps:<br/>ffmpeg, chromaprint, imagemagick, ...<br/>+ APK_RUNTIME_EXTRAS"]
+      R1 --> R2["pip install from wheels:<br/>beets, default pkgs<br/>+ USER_PIP_PACKAGES"]
+      R2 --> R3["Copy entry scripts & licenses"]
+    end
+  end
+
+  subgraph Container Start
+    direction TB
+    R3 --> E1["docker-entrypoint.sh<br/>Sets up user/group and file mask"]
+    E1 --> E2["Runtime Installs<br/><strong>Discouraged</strong><br/>apk add / pip install <strong>on EVERY START</strong> of:<br/>RUNTIME_APK_PACKAGES<br/>RUNTIME_PIP_PACKAGES"]
+    E2 --> E3["Issued command<br/>or start-web.sh"]
+  end
+
+  classDef env fill:#f1f5f9,stroke:#475569,color:#0f172a;
+  classDef builder fill:#dbeafe,stroke:#2563eb,color:#0f172a;
+  classDef runtime fill:#dcfce7,stroke:#16a34a,color:#052e16;
+  classDef start fill:#fef3c7,stroke:#d97706,color:#78350f;
+
+  class A1,A2,A3,A4,A5,A6,A7 env;
+  class B0,B1,B2 builder;
+  class R1,R2,R3 runtime;
+  class E1,E2,E3 start;
+```
 
 ## Contributing
 

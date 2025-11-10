@@ -28,16 +28,17 @@ ARG USER_PIP_PACKAGES=""
 # -----------------------------------------------------------
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PIP_NO_CACHE_DIR=1
+    PIP_DISABLE_PIP_VERSION_CHECK=1
 
 # Core build deps for Python wheels on Alpine
-RUN apk add --no-cache \
-      git \
+RUN --mount=type=cache,id=builder-apk,target=/var/cache/apk,sharing=locked \
+    apk add --no-cache \
       build-base \
-      musl-dev \
-      libffi-dev \
-      openssl-dev \
       cargo \
+      git \
+      libffi-dev \
+      musl-dev \
+      openssl-dev \
       ${APK_BUILD_DEPS}
 
 # Prepare wheelhouse
@@ -49,7 +50,8 @@ RUN git clone --depth 1 --branch "${BEETS_REF}" https://github.com/beetbox/beets
 
 # Build wheels for beets and any requested packages into /wheels
 # Building wheels up front guarantees availability in the final stage
-RUN set -eux; \
+RUN --mount=type=cache,id=builder-pip,target=/root/.cache/pip,sharing=locked \
+    set -eux; \
     python3 -m pip wheel --wheel-dir /wheels ./beets; \
     beets_wheel=''; \
     for wheel in /wheels/beets-*.whl; do \
@@ -126,7 +128,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 STOPSIGNAL SIGINT
 
 # Minimal runtime packages + su-exec for dropping privileges
-RUN apk add --no-cache \
+RUN --mount=type=cache,id=runtime-apk,target=/var/cache/apk,sharing=locked \
+    apk add \
       bash \
       chromaprint \
       ffmpeg \
@@ -138,7 +141,7 @@ RUN apk add --no-cache \
       yq \
       ${APK_RUNTIME_EXTRAS}
 
-# Bring in the built wheels and install without hitting the network
+# Bring in built wheels and install without hitting network
 ARG DEFAULT_PIP_PACKAGES="beets-beatport4 beets-filetote beets-importreplace requests requests_oauthlib beautifulsoup4 pyacoustid pylast python3-discogs-client langdetect flask Pillow"
 ARG USER_PIP_PACKAGES=""
 COPY --from=builder /wheels /wheels
@@ -154,19 +157,16 @@ RUN set -eux; \
     if [ -n "${USER_PIP_PACKAGES}" ]; then \
       python3 -m pip install --no-index --find-links=/wheels ${USER_PIP_PACKAGES}; \
     fi; \
-    rm -rf /wheels
+    rm -rf /wheels; \
+    mkdir -p "${CONFIG_DIR}"
 
-# Create directories and a non-root user at runtime via entrypoint (dynamic UID/GID)
-RUN mkdir -p ${CONFIG_DIR}
+# Set working directory to the config mount (entrypoint handles UID/GID setup)
 WORKDIR ${CONFIG_DIR}
 
 # Copy entrypoint and startup scripts
-COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-COPY start-web.sh /usr/local/bin/start-web.sh
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh /usr/local/bin/start-web.sh
+COPY --chmod=755 docker-entrypoint.sh start-web.sh /usr/local/bin/
 
 # Include upstream license for compliance
-RUN install -d /usr/share/licenses/beets
 COPY --from=builder /build/beets/LICENSE /usr/share/licenses/beets/LICENSE
 
 ENV BEETSDIR=${CONFIG_DIR}

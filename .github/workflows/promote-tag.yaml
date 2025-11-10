@@ -17,6 +17,9 @@ on:
 jobs:
   promote-tag:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     env:
       PROJECT_NAME: beets
     steps:

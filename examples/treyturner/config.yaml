@@ -152,11 +152,18 @@ album_fields:
           formats.append(ftoken)
     return ','.join(formats)
 
-  mediaformat_token: |
-    return f" [{media_token}{format_token}]"
-
   albumdisambig_token: |
     return '' if not albumdisambig else f" ({albumdisambig.title()})"
+
+template_functions:
+  mediaformat: |
+    def mediaformat(media_value, format_value):
+      media_value = media_value or ''
+      format_value = format_value or ''
+      if not media_value and not format_value:
+        return ''
+      return f" [{media_value}{format_value}]"
+    return mediaformat
 
 albumtypes:
   types:
@@ -389,10 +396,10 @@ musicbrainz:
   searchlimit: 10
 
 paths:
-  default: "$library_token/%if{$is_music,%bucket{$albumartist,alpha}/}%the{$albumartist}/$year-$month-$day - $album$atypes$albumdisambig_token$label_token$mediaformat_token/%if{$multidisc,$disctitle_token/}$track_token"
-  singleton: "$library_token/%if{$is_music,%bucket{$albumartist,alpha}/}%the{$albumartist}/$year-$month-$day - $title$atypes$albumdisambig_token$label_token$mediaformat_token/%if{$multidisc,$disctitle_token/}$track_token"
-  albumtype:soundtrack: "$library_token/Soundtracks/%the{$albumartist} - %the{$album}$atypes$albumdisambig_token ($year)$label_token$mediaformat_token/%if{$multidisc,$disctitle_token/}$track_token"
-  comp: "$library_token/VA/%the{$label}/$year-$month-$day - $album$atypes$albumdisambig_token$cat_token$mediaformat_token/%if{$multidisc,$disctitle_token/}$track_token"
+  default: "$library_token/%if{$is_music,%bucket{$albumartist,alpha}/}%the{$albumartist}/$year-$month-$day - $album$atypes$albumdisambig_token$label_token%mediaformat{$media_token,$format_token}/%if{$multidisc,$disctitle_token/}$track_token"
+  singleton: "$library_token/%if{$is_music,%bucket{$albumartist,alpha}/}%the{$albumartist}/$year-$month-$day - $title$atypes$albumdisambig_token$label_token%mediaformat{$media_token,$format_token}/%if{$multidisc,$disctitle_token/}$track_token"
+  albumtype:soundtrack: "$library_token/Soundtracks/%the{$albumartist} - %the{$album}$atypes$albumdisambig_token ($year)$label_token%mediaformat{$media_token,$format_token}/%if{$multidisc,$disctitle_token/}$track_token"
+  comp: "$library_token/VA/%the{$label}/$year-$month-$day - $album$atypes$albumdisambig_token$cat_token%mediaformat{$media_token,$format_token}/%if{$multidisc,$disctitle_token/}$track_token"
 
 permissions:
   file: 660

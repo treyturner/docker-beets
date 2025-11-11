@@ -23,6 +23,8 @@ ARG APK_BUILD_DEPS=""
 ARG DEFAULT_PIP_SOURCES="beets-beatport4 beets-filetote git+https://github.com/edgars-supe/beets-importreplace.git requests requests_oauthlib beautifulsoup4 pyacoustid pylast python3-discogs-client langdetect flask Pillow"
 # Space-separated distribution names installed in the runtime stage
 ARG DEFAULT_PIP_PACKAGES="beets-beatport4 beets-filetote beets-importreplace requests requests_oauthlib beautifulsoup4 pyacoustid pylast python3-discogs-client langdetect flask Pillow"
+# Space-separated override mappings ("pkg=spec") replacing sources in DEFAULT_PIP_SOURCES
+ARG PIP_SOURCE_OVERRIDES=""
 # Space-separated user Python packages to bundle (wheels built & installed)
 ARG USER_PIP_PACKAGES=""
 # -----------------------------------------------------------
@@ -92,6 +94,30 @@ RUN --mount=type=cache,id=builder-pip,target=/root/.cache/pip,sharing=locked \
         filtered="${filtered} ${pkg}"; \
       done; \
       default_packages="${filtered# }"; \
+    fi; \
+    overrides="${PIP_SOURCE_OVERRIDES}"; \
+    if [ -n "${overrides}" ]; then \
+      for override in ${overrides}; do \
+        pkg="${override%%=*}"; \
+        src="${override#*=}"; \
+        if [ -z "${pkg}" ] || [ -z "${src}" ] || [ "${pkg}" = "${src}" ]; then \
+          echo "Invalid pip override '${override}'. Expected key=value." >&2; \
+          exit 1; \
+        fi; \
+        filtered=''; \
+        for entry in ${default_sources}; do \
+          if [ "${entry}" = "${pkg}" ]; then \
+            continue; \
+          fi; \
+          filtered="${filtered} ${entry}"; \
+        done; \
+        default_sources="${filtered# }"; \
+        if [ -n "${default_sources}" ]; then \
+          default_sources="${default_sources} ${src}"; \
+        else \
+          default_sources="${src}"; \
+        fi; \
+      done; \
     fi; \
     tmp_dir="$(mktemp -d)"; \
     mv "${beets_wheel}" "${tmp_dir}/"; \

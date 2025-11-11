@@ -183,7 +183,28 @@ docker build \
 | `BEETS_REF`              | The git ref of [`beetbox/beets`](https://github.com/beetbox/beets) to build (tag, branch, or SHA)                                 |
 | `APK_BUILD_DEPS`         | Space-separated list of Alpine packages to install at build time                                                                   |
 | `APK_RUNTIME_EXTRAS`     | Space-separated list of Alpine packages to include in the final image                                                             |
+| `PIP_SOURCE_OVERRIDES`   | Space-separated overrides in the form `package=spec`, replacing entries in `DEFAULT_PIP_SOURCES`                                   |
 | `USER_PIP_PACKAGES`      | Space-separated list of user Python packages (wheels). Must already exist on PyPI or a compatible index so they can be wheeled offline. |
+
+#### Overriding default pip sources
+
+Set `PIP_SOURCE_OVERRIDES` to point specific packages at alternative sources (e.g., Git forks) without editing the Dockerfile:
+
+```bash
+docker build \
+  --build-arg PIP_SOURCE_OVERRIDES="beets-beatport4=git+https://github.com/you/beets-beatport4.git@testing" \
+  -t treyturner/beets:test-fork .
+```
+
+For sources already specified as full VCS URLs (like `importreplace`, which defaults to `git+https://github.com/edgars-supe/beets-importreplace.git`), you need to match the exact token:
+
+```bash
+docker build \
+  --build-arg PIP_SOURCE_OVERRIDES="git+https://github.com/edgars-supe/beets-importreplace.git=git+https://github.com/you/beets-importreplace.git@integration-tests" \
+  -t treyturner/beets:test-importreplace .
+```
+
+Multiple overrides can be separated by spaces, as long as each value has no whitespace.
 
 ### Container Lifecycle Overview
 
@@ -202,7 +223,7 @@ Where each build argument and environment variable applies during the image buil
 flowchart TD
   A1["<strong>Build Args</strong><br/>PYTHON_VERSION<br/>PYTHON_BASE_SUFFIX"] --> B0
   A2["<strong>Build Arg</strong><br/>APK_BUILD_DEPS"] --> B1
-  A3["<strong>Build Args</strong><br/>BEETS_REF<br/>DEFAULT_PIP_SOURCES<br/>DEFAULT_PIP_PACKAGES<br/>USER_PIP_PACKAGES"] --> B2
+  A3["<strong>Build Args</strong><br/>BEETS_REF<br/>DEFAULT_PIP_SOURCES<br/>PIP_SOURCE_OVERRIDES<br/>DEFAULT_PIP_PACKAGES<br/>USER_PIP_PACKAGES"] --> B2
   A4["<strong>Build Arg</strong><br/>APK_RUNTIME_EXTRAS"] --> R1
   A5["<strong>Build Args</strong><br/>DEFAULT_PIP_PACKAGES<br/>USER_PIP_PACKAGES"] --> R2
   A6["<strong>Env. Vars</strong><br/>PUID<br/>PGID<br/>UMASK"] --> E1

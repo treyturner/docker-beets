@@ -22,6 +22,7 @@ plugins:
   - inline
   - lastgenre
   - lyrics
+  - musicbrainz
   - permissions
   - replaygain
   - rewrite

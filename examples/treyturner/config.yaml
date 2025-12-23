@@ -5,6 +5,14 @@
 # Copy examples/treyturner/* to a directory on the Docker host, bind-
 # mount it to /config in the container, and modify to suit your needs.
 
+directory: /library
+id3v23: no
+library: /config/library.db
+original_date: yes
+path_sep_replace: "\u29F8"
+per_disc_numbering: yes
+threaded: yes
+
 plugins:
   - albumtypes
   - beatport4
@@ -15,6 +23,7 @@ plugins:
   - embedart
   - fetchart
   - filetote  # Compatible with beets v2.3.x-v2.5.x
+  - fromfilename
   - ftintitle
   - importadded
   - importreplace
@@ -29,14 +38,6 @@ plugins:
   - scrub
   - the
   - web
-
-directory: /library
-id3v23: no
-library: /config/library.db
-original_date: yes
-path_sep_replace: "\u29F8"
-per_disc_numbering: yes
-threaded: yes
 
 album_fields:
   is_music: |
@@ -173,12 +174,12 @@ beatport4:
   #password: some_password
 
 bucket:
-   bucket_alpha: ['# - D', 'E - L', 'M - R', 'S - Z']
-   bucket_alpha_regex:
-     '# - D': ^[!-\/0-9:-@A-Da-d¡¢¤©ª«¬²-¿À-Çà-çÐ]
-     'E - L': ^[E-Le-lÈ-Ïè-ï£]
-     'M - R': ^[M-Rm-rÑ-Öñ-öØœ®°]
-     'S - Z': ^[S-Zs-zŠšŽžŸù-ýÿ¥§]
+  bucket_alpha: ['# - D', 'E - L', 'M - R', 'S - Z']
+  bucket_alpha_regex:
+    '# - D': ^[!-\/0-9:-@A-Da-d¡¢¤©ª«¬²-¿À-Çà-çÐλ]
+    'E - L': ^[E-Le-lÈ-Ïè-ï£]
+    'M - R': ^[M-Rm-rÑ-Öñ-öØœ®°μ]
+    'S - Z': ^[S-Zs-zŠšŽžŸù-ýÿ¥§]
 
 chroma:
   auto: yes
@@ -221,6 +222,7 @@ fetchart:
   auto: yes
   enforce_ratio: yes
   #fanarttv_key: some_api_key
+  #google_key: some_api_key
   high_resolution: yes
   #lastfm_key: some_api_key
   max_filesize: 20000000
@@ -263,7 +265,7 @@ ftintitle:
 
 import:
   default_action: none
-  detail: yes
+  detail: no
   duplicate_action: ask
   duplicate_verbose_prompt: yes
   incremental: yes
@@ -297,10 +299,11 @@ importreplace:
         '[\u201C-\u201F]': '"'
         '\b[Ff]eat\.\b': 'ft.'
         '\b[Ff]eaturing\b': 'ft.'
-        '\bVs\.\b': 'vs.'
+        '\b[Vv][Ss]\.\b': 'vs.'
         '\b[Vv]ersus\b': 'vs.'
         '\b[Vv]ers\.\b': 'vs.'
-        '\bRMX\b': 'Remix'
+        '\b[Rr][Mm][Xx]\b': 'Remix'
+        '\b[Rr][Ee][Mm][Ii][Xx]\b': 'Remix'
     - item_fields: album
       album_fields: album
       replace:
@@ -320,6 +323,7 @@ importreplace:
       album_fields: media
       replace:
         'Digital Media': 'WEB'
+        'Digital': 'WEB'
         'File': 'WEB'
         'Blu-ray': 'BR'
         '12" Vinyl': 'VNL'
@@ -345,7 +349,7 @@ item_fields:
       disctitle_token = f'CD{str(disc).zfill(len(str(disctotal)))}'
       if disctitle not in (album, ''):
         disctitle_token += f' - {disctitle}'
-      return f'{disctitle_token}'
+      return disctitle_token
     else:
       return ''
   track_token: |
@@ -365,18 +369,28 @@ lastgenre:
 
 lyrics:
   force: yes
+  #google_API_key: some_api_key
   sources: [lrclib, genius]
   synced: yes
 
 match:
-  ignored: missing_tracks unmatched_tracks
-  ignored_media: ['SVCD', 'VCD', 'UMD', 'VHS']
+  ignored_media: ['Data CD', 'DVD', 'DVD-Video', 'VCD', 'SVCD', 'UMD', 'VHS']
+  strong_rec_thresh: 0.20
+  medium_rec_thresh: 0.33
+  max_rec:
+    data_source: medium
+    missing_tracks: medium
+    unmatched_tracks: strong
+    year: medium
   preferred:
-    media: ['CD|Digital Media|File', 'SACD', 'Vinyl']
-    countries: ['US', 'GB|UK']
-  strong_rec_thresh: 0.001
+    data_source: ['MusicBrainz']
 
 musicbrainz:
+  #host: 172.17.0.1:8675
+  #https: no
+  #ratelimit: 100
+  extra_tags: [barcode, catalognum, country, label, media, year]
+  search_limit: 10
   external_ids:
     discogs: yes
     spotify: yes
@@ -384,11 +398,10 @@ musicbrainz:
     beatport: yes
     deezer: yes
     tidal: yes
-  searchlimit: 10
 
 paths:
-  default: "$library_token/%if{$is_music,%bucket{$albumartist,alpha}/}%the{$albumartist}/$year-$month-$day - $album$atypes$albumdisambig_token$label_token%if{$media_token$format_token, [%if{$media_token,$media_token}%if{$format_token,$format_token}]}/%if{$multidisc,$disctitle_token/}$track_token"
-  singleton: "$library_token/%if{$is_music,%bucket{$albumartist,alpha}/}%the{$albumartist}/$year-$month-$day - $title$atypes$albumdisambig_token$label_token%if{$media_token$format_token, [%if{$media_token,$media_token}%if{$format_token,$format_token}]}/%if{$multidisc,$disctitle_token/}$track_token"
+  default: "$library_token/%if{$is_music,%bucket{%the{$albumartist},alpha}/}%the{$albumartist}/$year-$month-$day - $album$atypes$albumdisambig_token$label_token%if{$media_token$format_token, [%if{$media_token,$media_token}%if{$format_token,$format_token}]}/%if{$multidisc,$disctitle_token/}$track_token"
+  singleton: "$library_token/%if{$is_music,%bucket{%the{$albumartist},alpha}/}%the{$albumartist}/$year-$month-$day - $title$atypes$albumdisambig_token$label_token%if{$media_token$format_token, [%if{$media_token,$media_token}%if{$format_token,$format_token}]}/%if{$multidisc,$disctitle_token/}$track_token"
   albumtype:soundtrack: "$library_token/Soundtracks/%the{$albumartist} - %the{$album}$atypes$albumdisambig_token ($year)$label_token%if{$media_token$format_token, [%if{$media_token,$media_token}%if{$format_token,$format_token}]}/%if{$multidisc,$disctitle_token/}$track_token"
   comp: "$library_token/VA/%the{$label}/$year-$month-$day - $album$atypes$albumdisambig_token$cat_token%if{$media_token$format_token, [%if{$media_token,$media_token}%if{$format_token,$format_token}]}/%if{$multidisc,$disctitle_token/}$track_token"
 
@@ -421,7 +434,6 @@ replace:
   '[\uFE4D-\uFE4F]': "_"  # normalize underscores, ﹍﹎﹏ -> _
   "\uFF3F": "_"  # normalize fullwidth underscore,＿ -> _
 
-
 replaygain:
   backend: ffmpeg
 
@@ -429,5 +441,5 @@ scrub:
   auto: yes
 
 web:
-    host: 0.0.0.0
-    port: 8337
+  host: 0.0.0.0
+  port: 8337

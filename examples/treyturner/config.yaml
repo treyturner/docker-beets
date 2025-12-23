@@ -14,7 +14,7 @@ plugins:
   - discogs
   - embedart
   - fetchart
-  #- filetote  # Currently not compatible with beets >= 2.4.0
+  - filetote  # Compatible with beets v2.3.x-v2.5.x
   - ftintitle
   - importadded
   - importreplace

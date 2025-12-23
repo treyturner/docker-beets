@@ -73,11 +73,11 @@ RUN --mount=type=cache,id=builder-pip,target=/root/.cache/pip,sharing=locked \
     default_sources="${DEFAULT_PIP_SOURCES}"; \
     default_packages="${DEFAULT_PIP_PACKAGES}"; \
     case "${beets_version}" in \
-      2.3.*) keep_filetote=true ;; \
+      2.3.*|2.4.*|2.5.*) keep_filetote=true ;; \
       *) keep_filetote=false ;; \
     esac; \
     if [ "${keep_filetote}" != "true" ]; then \
-      echo "Disabling beets-filetote (requires beets >= 2.3.0 and < 2.4.0)" >&2; \
+      echo "Disabling beets-filetote (requires beets >= 2.3.0 and < 2.6.0)" >&2; \
       filtered=''; \
       for pkg in ${default_sources}; do \
         if [ "${pkg}" = "beets-filetote" ] || [ -z "${pkg}" ]; then \

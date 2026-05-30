@@ -38,7 +38,6 @@ RUN --mount=type=cache,id=builder-apk,target=/var/cache/apk,sharing=locked \
       build-base \
       cargo \
       cmake \
-      curl \
       git \
       libffi-dev \
       musl-dev \
@@ -163,6 +162,7 @@ RUN --mount=type=cache,id=runtime-apk,target=/var/cache/apk,sharing=locked \
     apk add \
       bash \
       chromaprint \
+      curl \
       ffmpeg \
       imagemagick \
       jq \

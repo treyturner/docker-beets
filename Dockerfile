@@ -122,10 +122,10 @@ RUN --mount=type=cache,id=builder-pip,target=/root/.cache/pip,sharing=locked \
     tmp_dir="$(mktemp -d)"; \
     mv "${beets_wheel}" "${tmp_dir}/"; \
     if [ -n "${default_sources}" ]; then \
-      python3 -m pip wheel --wheel-dir /wheels ${default_sources}; \
+      python3 -m pip wheel --wheel-dir /wheels "${tmp_dir}/${beets_basename}" ${default_sources}; \
     fi; \
     if [ -n "${USER_PIP_PACKAGES}" ]; then \
-      python3 -m pip wheel --wheel-dir /wheels ${USER_PIP_PACKAGES}; \
+      python3 -m pip wheel --wheel-dir /wheels "${tmp_dir}/${beets_basename}" ${USER_PIP_PACKAGES}; \
     fi; \
     printf '%s' "${default_packages}" > /wheels/.default-packages; \
     rm -f /wheels/beets-*.whl; \

@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.7
-ARG PYTHON_VERSION=3.12 \
+ARG PYTHON_VERSION=3.14 \
     PYTHON_BASE_SUFFIX=alpine
 
 FROM --platform=$BUILDPLATFORM python:${PYTHON_VERSION}${PYTHON_BASE_SUFFIX:+-${PYTHON_BASE_SUFFIX#-}} AS builder
@@ -15,7 +15,7 @@ LABEL \
 
 # -------- Build-time args you can override at build --------
 # Git ref (tag/branch/sha) to build from the beets repo
-ARG BEETS_REF=v2.5.1
+ARG BEETS_REF=v2.11.0
 # Space-separated extra APK packages needed ONLY for building (e.g., ffmpeg-dev)
 ARG APK_BUILD_DEPS=""
 # Space-separated Python package sources bundled by default alongside beets
@@ -37,6 +37,7 @@ RUN --mount=type=cache,id=builder-apk,target=/var/cache/apk,sharing=locked \
     apk add --no-cache \
       build-base \
       cargo \
+      cmake \
       git \
       libffi-dev \
       musl-dev \
@@ -50,8 +51,10 @@ RUN mkdir -p /wheels
 # Fetch beets source at the requested ref
 RUN git clone --depth 1 --branch "${BEETS_REF}" https://github.com/beetbox/beets.git
 
-# Build wheels for beets and any requested packages into /wheels
-# Building wheels up front guarantees availability in the final stage
+# Build wheels for beets and any requested packages into /wheels.
+# Building wheels up front guarantees availability in the final stage.
+# Passing the source-built beets wheel back into later pip resolution keeps
+# bundled plugins from replacing it with PyPI's beets wheel metadata.
 RUN --mount=type=cache,id=builder-pip,target=/root/.cache/pip,sharing=locked \
     set -eux; \
     python3 -m pip wheel --wheel-dir /wheels ./beets; \

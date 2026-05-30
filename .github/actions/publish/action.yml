@@ -20,14 +20,14 @@ runs:
   steps:
     - name: Login to DockerHub
       if: ${{ contains(inputs.refs, 'docker.io') && inputs.dockerhub-username != '' && inputs.dockerhub-password != '' }}
-      uses: docker/login-action@v3
+      uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee  # v4.2.0
       with:
         username: ${{ inputs.dockerhub-username }}
         password: ${{ inputs.dockerhub-password }}
 
     - name: Login to GitHub Container Registry
       if: ${{ contains(inputs.refs, 'ghcr.io') }}
-      uses: docker/login-action@v3
+      uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee  # v4.2.0
       with:
         registry: ghcr.io
         username: ${{ github.repository_owner }}

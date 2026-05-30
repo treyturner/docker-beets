@@ -25,15 +25,15 @@ handles UID/GID mapping at runtime.
 
 ## Bundled Packages
 
-### Beets + plugins:
+### Beets + plugins
 
 - The ubiquitous [`beets`](https://github.com/beetbox/beets)
 - [Samik081](https://github.com/Samik081)'s [`beatport4`](https://github.com/Samik081/beets-beatport4)
 - [gtronset](https://github.com/gtronset)'s [`filetote`](https://github.com/gtronset/beets-filetote)
-  - Only for beets `v2.3.x`–`v2.5.x`
+  - Only for beets `v2.3`+
 - [edgars-supe](https://github.com/edgars-supe)'s [`importreplace`](https://github.com/edgars-supe/beets-importreplace)
 
-### Python packages:
+### Python packages
 
 - [`requests`](https://requests.readthedocs.io/en/latest/) (for [`lyrics`](https://beets.readthedocs.io/en/latest/plugins/lyrics.html), [`fetchart`](https://beets.readthedocs.io/en/latest/plugins/fetchart.html), ...)
 - [`requests_oauthlib`](https://requests-oauthlib.readthedocs.io/en/latest/) (for [`beatport4`](https://github.com/Samik081/beets-beatport4))
@@ -123,7 +123,7 @@ Press CTRL+C to quit
 
 Once started, you can access the UI at `http://ip.of.docker.host:8337`, or start a shell via:
 
-```
+```shell
 $ docker exec -it beets bash
 2edbccf027b4:/config# beet --version
 beets version 2.11.0
@@ -134,7 +134,6 @@ beets version 2.11.0
 **⚠️ Note:** Runtime package installation happens during **every container start**, adding several seconds or more to startup time and requiring network access. For packages you always need, consider creating a custom image using the build-time `APK_RUNTIME_EXTRAS` and `USER_PIP_PACKAGES` build arguments instead.
 
 You can install additional Alpine (apk) or Python (pip) packages at container startup using the `RUNTIME_APK_PACKAGES` and `RUNTIME_PIP_PACKAGES` environment variables. This is useful for adding dependencies needed by specific plugins or custom workflows without rebuilding the image.
-
 
 ```bash
 # Install some additional packages before starting
@@ -271,6 +270,7 @@ I made this because I needed it. Issue reports, PRs, suggestions and questions a
 Build scripts/logic licensed via [The Unlicense](LICENSE).
 
 Bundled software includes additional licenses:
+
 - [`beets`](https://github.com/beetbox/beets) (MIT) — copy available in the image at `/usr/share/licenses/beets/LICENSE`.
 - Alpine packages such as `ffmpeg`, `chromaprint`, and others ship their respective licenses in `/usr/share/licenses/`.
 

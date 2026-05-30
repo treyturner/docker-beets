@@ -49,6 +49,7 @@ handles UID/GID mapping at runtime.
 
 - [`ffmpeg`](https://github.com/FFmpeg/FFmpeg)
 - [`chromaprint`](https://github.com/acoustid/chromaprint) (provides `fpcalc` to [`chroma`](https://beets.readthedocs.io/en/latest/plugins/chroma.html))
+- [`curl`](https://curl.se/)
 - [`imagemagick`](https://github.com/ImageMagick/ImageMagick)
 - [`jq`](https://github.com/jqlang/jq)
 - [`yq`](https://github.com/mikefarah/yq)

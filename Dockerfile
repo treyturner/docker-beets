@@ -38,6 +38,7 @@ RUN --mount=type=cache,id=builder-apk,target=/var/cache/apk,sharing=locked \
       build-base \
       cargo \
       cmake \
+      curl \
       git \
       libffi-dev \
       musl-dev \

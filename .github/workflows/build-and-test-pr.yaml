@@ -10,7 +10,7 @@ jobs:
     permissions:
       contents: read
     env:
-      BEETS_VERSION: "2.5.1"
+      BEETS_VERSION: "2.11.0"
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

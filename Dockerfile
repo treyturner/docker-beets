@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.7
-ARG PYTHON_VERSION=3.12 \
+ARG PYTHON_VERSION=3.14 \
     PYTHON_BASE_SUFFIX=alpine
 
 FROM --platform=$BUILDPLATFORM python:${PYTHON_VERSION}${PYTHON_BASE_SUFFIX:+-${PYTHON_BASE_SUFFIX#-}} AS builder
@@ -15,7 +15,7 @@ LABEL \
 
 # -------- Build-time args you can override at build --------
 # Git ref (tag/branch/sha) to build from the beets repo
-ARG BEETS_REF=v2.5.1
+ARG BEETS_REF=v2.11.0
 # Space-separated extra APK packages needed ONLY for building (e.g., ffmpeg-dev)
 ARG APK_BUILD_DEPS=""
 # Space-separated Python package sources bundled by default alongside beets
@@ -37,6 +37,7 @@ RUN --mount=type=cache,id=builder-apk,target=/var/cache/apk,sharing=locked \
     apk add --no-cache \
       build-base \
       cargo \
+      cmake \
       git \
       libffi-dev \
       musl-dev \
@@ -50,8 +51,10 @@ RUN mkdir -p /wheels
 # Fetch beets source at the requested ref
 RUN git clone --depth 1 --branch "${BEETS_REF}" https://github.com/beetbox/beets.git
 
-# Build wheels for beets and any requested packages into /wheels
-# Building wheels up front guarantees availability in the final stage
+# Build wheels for beets and any requested packages into /wheels.
+# Building wheels up front guarantees availability in the final stage.
+# Passing the source-built beets wheel back into later pip resolution keeps
+# bundled plugins from replacing it with PyPI's beets wheel metadata.
 RUN --mount=type=cache,id=builder-pip,target=/root/.cache/pip,sharing=locked \
     set -eux; \
     python3 -m pip wheel --wheel-dir /wheels ./beets; \
@@ -73,11 +76,12 @@ RUN --mount=type=cache,id=builder-pip,target=/root/.cache/pip,sharing=locked \
     default_sources="${DEFAULT_PIP_SOURCES}"; \
     default_packages="${DEFAULT_PIP_PACKAGES}"; \
     case "${beets_version}" in \
-      2.3.*|2.4.*|2.5.*) keep_filetote=true ;; \
+      2.3.*|2.4.*|2.5.*|2.6.*|2.7.*|2.8.*|2.9.*) keep_filetote=true ;; \
+      2.10.*|2.11.*) echo "Warning: Beets ${beets_version} detected. beets-filetote only officially supports >= 2.3.0 to < 2.10.0)" >&2; keep_filetote=true ;; \
       *) keep_filetote=false ;; \
     esac; \
     if [ "${keep_filetote}" != "true" ]; then \
-      echo "Disabling beets-filetote (requires beets >= 2.3.0 and < 2.6.0)" >&2; \
+      echo "Disabling beets-filetote (requires beets >= 2.3.0 and < 2.10.0)" >&2; \
       filtered=''; \
       for pkg in ${default_sources}; do \
         if [ "${pkg}" = "beets-filetote" ] || [ -z "${pkg}" ]; then \
@@ -122,10 +126,10 @@ RUN --mount=type=cache,id=builder-pip,target=/root/.cache/pip,sharing=locked \
     tmp_dir="$(mktemp -d)"; \
     mv "${beets_wheel}" "${tmp_dir}/"; \
     if [ -n "${default_sources}" ]; then \
-      python3 -m pip wheel --wheel-dir /wheels ${default_sources}; \
+      python3 -m pip wheel --wheel-dir /wheels "${tmp_dir}/${beets_basename}" ${default_sources}; \
     fi; \
     if [ -n "${USER_PIP_PACKAGES}" ]; then \
-      python3 -m pip wheel --wheel-dir /wheels ${USER_PIP_PACKAGES}; \
+      python3 -m pip wheel --wheel-dir /wheels "${tmp_dir}/${beets_basename}" ${USER_PIP_PACKAGES}; \
     fi; \
     printf '%s' "${default_packages}" > /wheels/.default-packages; \
     rm -f /wheels/beets-*.whl; \

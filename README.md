@@ -11,7 +11,7 @@ handles UID/GID mapping at runtime.
 
 ### Tag Strategy
 
-- `vX.Y.Z` - manual builds that pin the upstream beets release tag (e.g. `v2.5.1`)
+- `vX.Y.Z` - manual builds that pin the upstream beets release tag (e.g. `v2.11.0`)
   - You want one of these. They're mutable, but always contain the specified version of beets.
   - Need a version not currently posted? Open an issue and I'd be happy to build and publish it.
 - `latest` - the latest version of beets I manually promoted after deeming it stable (YMMV)
@@ -25,15 +25,15 @@ handles UID/GID mapping at runtime.
 
 ## Bundled Packages
 
-### Beets + plugins:
+### Beets + plugins
 
 - The ubiquitous [`beets`](https://github.com/beetbox/beets)
 - [Samik081](https://github.com/Samik081)'s [`beatport4`](https://github.com/Samik081/beets-beatport4)
 - [gtronset](https://github.com/gtronset)'s [`filetote`](https://github.com/gtronset/beets-filetote)
-  - Only for beets `v2.3.x`–`v2.5.x`
+  - Only for beets `v2.3`+
 - [edgars-supe](https://github.com/edgars-supe)'s [`importreplace`](https://github.com/edgars-supe/beets-importreplace)
 
-### Python packages:
+### Python packages
 
 - [`requests`](https://requests.readthedocs.io/en/latest/) (for [`lyrics`](https://beets.readthedocs.io/en/latest/plugins/lyrics.html), [`fetchart`](https://beets.readthedocs.io/en/latest/plugins/fetchart.html), ...)
 - [`requests_oauthlib`](https://requests-oauthlib.readthedocs.io/en/latest/) (for [`beatport4`](https://github.com/Samik081/beets-beatport4))
@@ -81,10 +81,10 @@ The container is suited for one-off commands; simply put it after the image name
 $ docker run --rm \
   -v "$(pwd)/config:/config" \
   -v "$(pwd)/library:/library" \
-  ghcr.io/treyturner/beets:v2.5.1 \
+  ghcr.io/treyturner/beets:v2.11.0 \
   beet --version
 
-beets version 2.5.1
+beets version 2.11.0
 ```
 
 ### Interactive shell
@@ -95,11 +95,11 @@ The image ships with `bash` if you prefer to work with an interactive shell insi
 $ docker run --rm -it \
   -v "$(pwd)/config:/config" \
   -v "$(pwd)/library:/library" \
-  ghcr.io/treyturner/beets:v2.5.1 \
+  ghcr.io/treyturner/beets:v2.11.0 \
   bash
 
 b8afc450904c:/config$ beet --version
-beets version 2.5.1
+beets version 2.11.0
 ```
 
 ### Persisting a container
@@ -111,7 +111,7 @@ $ docker run -d --rm --name beets \
   -p 8337:8337 \
   -v "$(pwd)/config:/config" \
   -v "$(pwd)/library:/library" \
-  ghcr.io/treyturner/beets:v2.5.1
+  ghcr.io/treyturner/beets:v2.11.0
 
 $ docker logs beets
  * Serving Flask app 'beetsplug.web'
@@ -123,10 +123,10 @@ Press CTRL+C to quit
 
 Once started, you can access the UI at `http://ip.of.docker.host:8337`, or start a shell via:
 
-```
+```shell
 $ docker exec -it beets bash
 2edbccf027b4:/config# beet --version
-beets version 2.5.1
+beets version 2.11.0
 ```
 
 ### Installing additional packages at runtime
@@ -134,7 +134,6 @@ beets version 2.5.1
 **⚠️ Note:** Runtime package installation happens during **every container start**, adding several seconds or more to startup time and requiring network access. For packages you always need, consider creating a custom image using the build-time `APK_RUNTIME_EXTRAS` and `USER_PIP_PACKAGES` build arguments instead.
 
 You can install additional Alpine (apk) or Python (pip) packages at container startup using the `RUNTIME_APK_PACKAGES` and `RUNTIME_PIP_PACKAGES` environment variables. This is useful for adding dependencies needed by specific plugins or custom workflows without rebuilding the image.
-
 
 ```bash
 # Install some additional packages before starting
@@ -144,7 +143,7 @@ $ docker run -d --name beets \
   -p 8337:8337 \
   -v "$(pwd)/config:/config" \
   -v "$(pwd)/library:/library" \
-  ghcr.io/treyturner/beets:v2.5.1
+  ghcr.io/treyturner/beets:v2.11.0
 ```
 
 ### Database trouble?
@@ -153,7 +152,7 @@ You can add `sqlite` to the container to debug or resolve problems with the beet
 
 ```bash
 # If container isn't running...
-docker run -it --rm -w /config -e RUNTIME_APK_PACKAGES="sqlite" ghcr.io/treyturner/beets:v2.5.1 sqlite3 library.db
+docker run -it --rm -w /config -e RUNTIME_APK_PACKAGES="sqlite" ghcr.io/treyturner/beets:v2.11.0 sqlite3 library.db
 
 # With container running...
 docker exec -it -w /config beets bash -c 'apk add --no-cache sqlite && sqlite3 library.db'
@@ -178,7 +177,7 @@ docker build \
 
 | Build Arg                | Description                                                                                                                        |
 |--------------------------|------------------------------------------------------------------------------------------------------------------------------------|
-| `PYTHON_VERSION`         | Python version to use, e.g. `3.12`                                                                                                |
+| `PYTHON_VERSION`         | Python version to use, e.g. `3.14`                                                                                                |
 | `PYTHON_BASE_SUFFIX`     | Python base image suffix, e.g. `alpine`                                                                                            |
 | `BEETS_REF`              | The git ref of [`beetbox/beets`](https://github.com/beetbox/beets) to build (tag, branch, or SHA)                                 |
 | `APK_BUILD_DEPS`         | Space-separated list of Alpine packages to install at build time                                                                   |
@@ -271,6 +270,7 @@ I made this because I needed it. Issue reports, PRs, suggestions and questions a
 Build scripts/logic licensed via [The Unlicense](LICENSE).
 
 Bundled software includes additional licenses:
+
 - [`beets`](https://github.com/beetbox/beets) (MIT) — copy available in the image at `/usr/share/licenses/beets/LICENSE`.
 - Alpine packages such as `ffmpeg`, `chromaprint`, and others ship their respective licenses in `/usr/share/licenses/`.
 

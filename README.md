@@ -20,7 +20,7 @@ handles UID/GID mapping at runtime.
 - `vX.Y.Z-dev` - latest dev image for beets X.Y.Z
   - Where builds of upstream refs are tested before being manually promoted to `vX.Y.Z`
   - Automatically built for the version of beets pinned in [`build-and-publish-dev.yaml`](.github/workflows/build-and-publish-dev.yaml) on merges to this repo's `main` branch
-- `vX.Y.Z-dev-<run_id>.<attempt_id>` – build-specific dev images for traceability
+- `vX.Y.Z-dev-<run_id>.<attempt_id>` - build-specific dev images for traceability
   - For debugging only, ie. helping me understand an issue you've reported
 
 ## Bundled Packages
@@ -30,7 +30,7 @@ handles UID/GID mapping at runtime.
 - The ubiquitous [`beets`](https://github.com/beetbox/beets)
 - [Samik081](https://github.com/Samik081)'s [`beatport4`](https://github.com/Samik081/beets-beatport4)
 - [gtronset](https://github.com/gtronset)'s [`filetote`](https://github.com/gtronset/beets-filetote)
-  - Only for beets `v2.3`+
+  - Only for beets >= `v2.3` and < `v2.10.0`
 - [edgars-supe](https://github.com/edgars-supe)'s [`importreplace`](https://github.com/edgars-supe/beets-importreplace)
 
 ### Python packages

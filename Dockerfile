@@ -20,7 +20,7 @@ ARG BEETS_REF=v2.11.0
 ARG APK_BUILD_DEPS=""
 # Space-separated Python package sources bundled by default alongside beets
 # (git URLs allowed; leave blank to skip)
-ARG DEFAULT_PIP_SOURCES="beets-beatport4 beets-filetote git+https://github.com/edgars-supe/beets-importreplace.git requests requests_oauthlib beautifulsoup4 pyacoustid pylast python3-discogs-client langdetect flask Pillow"
+ARG DEFAULT_PIP_SOURCES="beets-beatport4 git+https://github.com/treyturner/beets-filetote.git git+https://github.com/edgars-supe/beets-importreplace.git requests requests_oauthlib beautifulsoup4 pyacoustid pylast python3-discogs-client langdetect flask Pillow"
 # Space-separated distribution names installed in the runtime stage
 ARG DEFAULT_PIP_PACKAGES="beets-beatport4 beets-filetote beets-importreplace requests requests_oauthlib beautifulsoup4 pyacoustid pylast python3-discogs-client langdetect flask Pillow"
 # Space-separated override mappings ("pkg=spec") replacing sources in DEFAULT_PIP_SOURCES
@@ -76,11 +76,11 @@ RUN --mount=type=cache,id=builder-pip,target=/root/.cache/pip,sharing=locked \
     default_sources="${DEFAULT_PIP_SOURCES}"; \
     default_packages="${DEFAULT_PIP_PACKAGES}"; \
     case "${beets_version}" in \
-      2.3.*|2.4.*|2.5.*|2.6.*|2.7.*|2.8.*|2.9.*) keep_filetote=true ;; \
+      2.3.*|2.4.*|2.5.*|2.6.*|2.7.*|2.8.*|2.9.*|2.10.*|2.11.*) keep_filetote=true ;; \
       *) keep_filetote=false ;; \
     esac; \
     if [ "${keep_filetote}" != "true" ]; then \
-      echo "Disabling beets-filetote (requires beets >= 2.3.0 and < 2.10.0)" >&2; \
+      echo "Disabling beets-filetote (requires beets >= 2.3.0 and < 2.12.0)" >&2; \
       filtered=''; \
       for pkg in ${default_sources}; do \
         if [ "${pkg}" = "beets-filetote" ] || [ -z "${pkg}" ]; then \

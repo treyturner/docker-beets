@@ -29,8 +29,8 @@ handles UID/GID mapping at runtime.
 
 - The ubiquitous [`beets`](https://github.com/beetbox/beets)
 - [Samik081](https://github.com/Samik081)'s [`beatport4`](https://github.com/Samik081/beets-beatport4)
-- [gtronset](https://github.com/gtronset)'s [`filetote`](https://github.com/gtronset/beets-filetote)
-  - Only for beets >= `v2.3` and < `v2.10.0`
+- [my fork](https://github.com/treyturner/beets-filetote) of [gtronset](https://github.com/gtronset)'s [`filetote`](https://github.com/gtronset/beets-filetote)
+  - Only for beets >= `v2.3` and < `v2.12.0`
 - [edgars-supe](https://github.com/edgars-supe)'s [`importreplace`](https://github.com/edgars-supe/beets-importreplace)
 
 ### Python packages

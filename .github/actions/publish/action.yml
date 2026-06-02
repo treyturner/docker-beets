@@ -25,6 +25,14 @@ runs:
         username: ${{ inputs.dockerhub-username }}
         password: ${{ inputs.dockerhub-password }}
 
+    - name: Login to Forgejo
+      if: ${{ contains(inputs.refs, 'forgejo.treyturner.info') && inputs.forgejo-registry-token != '' }}
+      uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee  # v4.2.0
+      with:
+        registry: forgejo.treyturner.info
+        username: ${{ github.repository_owner }}
+        password: ${{ inputs.forgejo-registry-token }}
+
     - name: Login to GitHub Container Registry
       if: ${{ contains(inputs.refs, 'ghcr.io') }}
       uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee  # v4.2.0

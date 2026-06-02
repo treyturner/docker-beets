@@ -7,6 +7,7 @@ handles UID/GID mapping at runtime.
 ## Available Images
 
 - [GHCR](https://github.com/treyturner/docker-beets/pkgs/container/beets): `ghcr.io/treyturner/beets`
+- [Forgejo](https://forgejo.treyturner.info/treyturner/-/packages/container/beets): `forgejo.treyturner.info/treyturner/beets`
 - [Docker Hub](https://hub.docker.com/r/treyturner/beets): `docker.io/treyturner/beets`
 
 ### Tag Strategy

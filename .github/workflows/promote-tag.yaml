@@ -58,6 +58,13 @@ jobs:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Forgejo login
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee  # v4.2.0
+        with:
+          registry: forgejo.treyturner.info
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.FORGEJO_REGISTRY_TOKEN }}
+
       - name: GitHub Container Registry login
         uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee  # v4.2.0
         with:
@@ -76,6 +83,7 @@ jobs:
         run: |
           owner_lower=$(printf '%s' "$GH_OWNER" | tr '[:upper:]' '[:lower:]')
           hub_source="${DOCKERHUB_USERNAME}/${PROJECT_NAME}:${SOURCE_TAG}"
+          fj_source="forgejo.treyturner.info/${owner_lower}/${PROJECT_NAME}:${SOURCE_TAG}"
           ghcr_source="ghcr.io/${owner_lower}/${PROJECT_NAME}:${SOURCE_TAG}"
 
           mkdir -p tags
@@ -83,6 +91,9 @@ jobs:
 
           echo "Validating source manifest on DockerHub: ${hub_source}"
           docker buildx imagetools inspect "${hub_source}" > /dev/null
+
+          echo "Validating source manifest on Forgejo: ${fj_source}"
+          docker buildx imagetools inspect "${fj_source}" > /dev/null
 
           echo "Validating source manifest on GHCR: ${ghcr_source}"
           docker buildx imagetools inspect "${ghcr_source}" > /dev/null
@@ -94,6 +105,11 @@ jobs:
             docker buildx imagetools create \
               --tag "${DOCKERHUB_USERNAME}/${PROJECT_NAME}:${tag}" \
               "${hub_source}"
+
+            echo "Promoting Forgejo tag: ${fj_source} -> ${tag}"
+            docker buildx imagetools create \
+              --tag "forgejo.treyturner.info/${owner_lower}/${PROJECT_NAME}:${tag}" \
+              "${fj_source}"
 
             echo "Promoting GHCR tag: ${ghcr_source} -> ${tag}"
             docker buildx imagetools create \

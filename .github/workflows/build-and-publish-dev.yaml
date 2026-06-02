@@ -29,6 +29,7 @@ jobs:
           repos: |
             ghcr.io/treyturner/beets
             docker.io/treyturner/beets
+            forgejo.treyturner.info/treyturner/beets
           upstream-ref: ${{ inputs.upstream-ref || format('v{0}', env.BEETS_VERSION) }}
 
       - name: Test
@@ -42,5 +43,6 @@ jobs:
         with:
           dockerhub-username: ${{ vars.DOCKERHUB_USERNAME }}
           dockerhub-password: ${{ secrets.DOCKERHUB_TOKEN }}
+          forgejo-registry-token: ${{ secrets.FORGEJO_REGISTRY_TOKEN }}
           github-token: ${{ github.token }}
           refs: ${{ steps.build.outputs.refs }}

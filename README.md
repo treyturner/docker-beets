@@ -33,6 +33,7 @@ handles UID/GID mapping at runtime.
 - [gtronset](https://github.com/gtronset)'s [`filetote`](https://github.com/gtronset/beets-filetote)
   - Only for beets >= `v2.3` and < `v2.12.0`
 - [edgars-supe](https://github.com/edgars-supe)'s [`importreplace`](https://github.com/edgars-supe/beets-importreplace)
+- My [`tidalv1meta`](https://github.com/treyturner/beets-tidal-v1-meta)
 
 ### Python packages
 

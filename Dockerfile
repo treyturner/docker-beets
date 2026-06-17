@@ -20,9 +20,9 @@ ARG BEETS_REF=v2.11.0
 ARG APK_BUILD_DEPS=""
 # Space-separated Python package sources bundled by default alongside beets
 # (git URLs allowed; leave blank to skip)
-ARG DEFAULT_PIP_SOURCES="beets-beatport4 beets-filetote git+https://github.com/edgars-supe/beets-importreplace.git git+https://github.com/treyturner/beets-tidal-v1-meta.git requests requests_oauthlib beautifulsoup4 pyacoustid pylast python3-discogs-client langdetect flask Pillow"
+ARG DEFAULT_PIP_SOURCES="beets-beatport4 beets-filetote git+https://github.com/edgars-supe/beets-importreplace.git git+https://github.com/treyturner/beets-tidal-v1-meta.git requests requests-oauthlib beautifulsoup4 pyacoustid pylast python3-discogs-client langdetect flask Pillow"
 # Space-separated distribution names installed in the runtime stage
-ARG DEFAULT_PIP_PACKAGES="beets-beatport4 beets-filetote beets-importreplace beets-tidal-v1-meta requests requests_oauthlib beautifulsoup4 pyacoustid pylast python3-discogs-client langdetect flask Pillow"
+ARG DEFAULT_PIP_PACKAGES="beets-beatport4 beets-filetote beets-importreplace beets-tidal-v1-meta requests requests-oauthlib beautifulsoup4 pyacoustid pylast python3-discogs-client langdetect flask Pillow"
 # Space-separated override mappings ("pkg=spec") replacing sources in DEFAULT_PIP_SOURCES
 ARG PIP_SOURCE_OVERRIDES=""
 # Space-separated user Python packages to bundle (wheels built & installed)

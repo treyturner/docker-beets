@@ -7,8 +7,8 @@ FROM --platform=$BUILDPLATFORM python:${PYTHON_VERSION}${PYTHON_BASE_SUFFIX:+-${
 LABEL \
   org.opencontainers.image.title="beets" \
   org.opencontainers.image.description="A customizable Docker image for beets - the music library manager and tagger." \
-  org.opencontainers.image.url="https://github.com/beetbox/beets" \
-  org.opencontainers.image.source="https://github.com/beetbox/beets" \
+  org.opencontainers.image.url="https://github.com/treyturner/docker-beets" \
+  org.opencontainers.image.source="https://github.com/treyturner/docker-beets" \
   org.opencontainers.image.licenses="MIT" \
   org.opencontainers.image.documentation="https://beets.readthedocs.io/en/latest/" \
   org.opencontainers.image.vendor="Trey Turner"

@@ -8,6 +8,9 @@ inputs:
   dockerhub-password:
     type: string
     required: false
+  forgejo-registry-token:
+    type: string
+    required: false
   github-token:
     type: string
     required: true

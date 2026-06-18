@@ -38,7 +38,7 @@ handles UID/GID mapping at runtime.
 ### Python packages
 
 - [`requests`](https://requests.readthedocs.io/en/latest/) (for [`lyrics`](https://beets.readthedocs.io/en/latest/plugins/lyrics.html), [`fetchart`](https://beets.readthedocs.io/en/latest/plugins/fetchart.html), ...)
-- [`requests_oauthlib`](https://requests-oauthlib.readthedocs.io/en/latest/) (for [`beatport4`](https://github.com/Samik081/beets-beatport4))
+- [`requests-oauthlib`](https://requests-oauthlib.readthedocs.io/en/latest/) (for [`beatport4`](https://github.com/Samik081/beets-beatport4))
 - [`beautifulsoup4`](https://beautiful-soup-4.readthedocs.io/en/latest/) (for [`lyrics`](https://beets.readthedocs.io/en/latest/plugins/lyrics.html))
 - [`pyacoustid`](https://github.com/beetbox/pyacoustid) (for [`chroma`](https://beets.readthedocs.io/en/latest/plugins/chroma.html))
 - [`pylast`](https://github.com/pylast/pylast) (for [`lastgenre`](https://beets.readthedocs.io/en/latest/plugins/lastgenre.html))

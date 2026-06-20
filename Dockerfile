@@ -20,9 +20,9 @@ ARG BEETS_REF=v2.11.0
 ARG APK_BUILD_DEPS=""
 # Space-separated Python package sources bundled by default alongside beets
 # (git URLs allowed; leave blank to skip)
-ARG DEFAULT_PIP_SOURCES="beets-beatport4 beets-filetote git+https://github.com/edgars-supe/beets-importreplace.git git+https://github.com/treyturner/beets-tidal-v1-meta.git requests requests-oauthlib beautifulsoup4 pyacoustid pylast python3-discogs-client langdetect flask Pillow"
+ARG DEFAULT_PIP_SOURCES="beets-beatport4 beets-filetote git+https://github.com/edgars-supe/beets-importreplace.git git+https://github.com/treyturner/beets-tidal-v1-meta.git titlecase requests requests-oauthlib beautifulsoup4 pyacoustid pylast python3-discogs-client langdetect flask Pillow"
 # Space-separated distribution names installed in the runtime stage
-ARG DEFAULT_PIP_PACKAGES="beets-beatport4 beets-filetote beets-importreplace beets-tidal-v1-meta requests requests-oauthlib beautifulsoup4 pyacoustid pylast python3-discogs-client langdetect flask Pillow"
+ARG DEFAULT_PIP_PACKAGES="beets-beatport4 beets-filetote beets-importreplace beets-tidal-v1-meta titlecase requests requests-oauthlib beautifulsoup4 pyacoustid pylast python3-discogs-client langdetect flask Pillow"
 # Space-separated override mappings ("pkg=spec") replacing sources in DEFAULT_PIP_SOURCES
 ARG PIP_SOURCE_OVERRIDES=""
 # Space-separated user Python packages to bundle (wheels built & installed)
@@ -172,15 +172,15 @@ RUN --mount=type=cache,id=runtime-apk,target=/var/cache/apk,sharing=locked \
       ${APK_RUNTIME_EXTRAS}
 
 # Bring in built wheels and install without hitting network
-ARG DEFAULT_PIP_PACKAGES="beets-beatport4 beets-filetote beets-importreplace requests requests_oauthlib beautifulsoup4 pyacoustid pylast python3-discogs-client langdetect flask Pillow"
 ARG USER_PIP_PACKAGES=""
 COPY --from=builder /wheels /wheels
 RUN set -eux; \
     python3 -m pip install --no-index --find-links=/wheels beets; \
-    default_packages="${DEFAULT_PIP_PACKAGES}"; \
-    if [ -f /wheels/.default-packages ]; then \
-      default_packages="$(tr '\n' ' ' < /wheels/.default-packages)"; \
+    if [ ! -f /wheels/.default-packages ]; then \
+      echo "Missing /wheels/.default-packages from builder stage" >&2; \
+      exit 1; \
     fi; \
+    default_packages="$(tr '\n' ' ' < /wheels/.default-packages)"; \
     if [ -n "${default_packages}" ]; then \
       python3 -m pip install --no-index --find-links=/wheels ${default_packages}; \
     fi; \

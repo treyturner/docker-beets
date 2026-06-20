@@ -38,7 +38,7 @@ handles UID/GID mapping at runtime.
 ### Python packages
 
 - [`requests`](https://requests.readthedocs.io/en/latest/) (for [`lyrics`](https://beets.readthedocs.io/en/latest/plugins/lyrics.html), [`fetchart`](https://beets.readthedocs.io/en/latest/plugins/fetchart.html), ...)
-- [`requests-oauthlib`](https://requests-oauthlib.readthedocs.io/en/latest/) (for [`beatport4`](https://github.com/Samik081/beets-beatport4))
+- [`requests-oauthlib`](https://requests-oauthlib.readthedocs.io/en/latest/) (for [`beatport4`](https://github.com/Samik081/beets-beatport4), [`tidal`](https://beets.readthedocs.io/en/stable/plugins/tidal.html))
 - [`beautifulsoup4`](https://beautiful-soup-4.readthedocs.io/en/latest/) (for [`lyrics`](https://beets.readthedocs.io/en/latest/plugins/lyrics.html))
 - [`pyacoustid`](https://github.com/beetbox/pyacoustid) (for [`chroma`](https://beets.readthedocs.io/en/latest/plugins/chroma.html))
 - [`pylast`](https://github.com/pylast/pylast) (for [`lastgenre`](https://beets.readthedocs.io/en/latest/plugins/lastgenre.html))
@@ -46,6 +46,7 @@ handles UID/GID mapping at runtime.
 - [`langdetect`](https://github.com/fedelopez77/langdetect) (for [`lyrics`](https://beets.readthedocs.io/en/latest/plugins/lyrics.html))
 - [`flask`](https://flask.palletsprojects.com/en/stable/) (for [`web`](https://beets.readthedocs.io/en/latest/plugins/web.html))
 - [`Pillow`](https://github.com/python-pillow/Pillow) (for [`fetchart`](https://beets.readthedocs.io/en/latest/plugins/fetchart.html), [`embedart`](https://beets.readthedocs.io/en/latest/plugins/embedart.html), ...)
+- [`titlecase`](https://pypi.org/project/titlecase/) (for [`titlecase`](https://beets.readthedocs.io/en/stable/plugins/titlecase.html))
 
 ### Runtime tools
 

@@ -15,7 +15,7 @@ LABEL \
 
 # -------- Build-time args you can override at build --------
 # Git ref (tag/branch/sha) to build from the beets repo
-ARG BEETS_REF=v2.11.0
+ARG BEETS_REF=v2.12.0
 # Space-separated extra APK packages needed ONLY for building (e.g., ffmpeg-dev)
 ARG APK_BUILD_DEPS=""
 # Space-separated Python package sources bundled by default alongside beets

@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       release-version:
-        description: "Targeted release version tag (e.g. 'v2.11.0')"
+        description: "Targeted release version tag (e.g. 'v2.12.0')"
         type: string
         required: true
       promote-latest:
@@ -31,7 +31,7 @@ jobs:
           PROMOTE_LATEST: ${{ inputs.promote-latest }}
         run: |
           if ! [[ "$RELEASE_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "::error::RELEASE_VERSION must match v<digit>.<digit>.<digit> (e.g. v2.11.0)"
+            echo "::error::RELEASE_VERSION must match v<digit>.<digit>.<digit> (e.g. v2.12.0)"
             exit 1
           fi
           source_tag="${RELEASE_VERSION}-dev"

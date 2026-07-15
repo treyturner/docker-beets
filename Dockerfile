@@ -76,7 +76,7 @@ RUN --mount=type=cache,id=builder-pip,target=/root/.cache/pip,sharing=locked \
     default_sources="${DEFAULT_PIP_SOURCES}"; \
     default_packages="${DEFAULT_PIP_PACKAGES}"; \
     case "${beets_version}" in \
-      2.3.*|2.4.*|2.5.*|2.6.*|2.7.*|2.8.*|2.9.*|2.10.*|2.11.*) keep_filetote=true ;; \
+      2.3.*|2.4.*|2.5.*|2.6.*|2.7.*|2.8.*|2.9.*|2.10.*|2.11.*|2.12.*) keep_filetote=true ;; \
       *) keep_filetote=false ;; \
     esac; \
     if [ "${keep_filetote}" != "true" ]; then \

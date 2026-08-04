@@ -12,7 +12,7 @@ handles UID/GID mapping at runtime.
 
 ### Tag Strategy
 
-- `vX.Y.Z` - manual builds that pin the upstream beets release tag (e.g. `v2.12.0`)
+- `vX.Y.Z` - manual builds that pin the upstream beets release tag (e.g. `v2.13.1`)
   - You want one of these. They're mutable, but always contain the specified version of beets.
   - Need a version not currently posted? Open an issue and I'd be happy to build and publish it.
 - `latest` - the latest version of beets I manually promoted after deeming it stable (YMMV)
@@ -31,9 +31,10 @@ handles UID/GID mapping at runtime.
 - The ubiquitous [`beets`](https://github.com/beetbox/beets)
 - [Samik081](https://github.com/Samik081)'s [`beatport4`](https://github.com/Samik081/beets-beatport4)
 - [gtronset](https://github.com/gtronset)'s [`filetote`](https://github.com/gtronset/beets-filetote)
-  - Only for beets >= `v2.3` and < `v2.13.0`
+  - Only for beets >= `v2.3` and < `v2.14.0`
 - [edgars-supe](https://github.com/edgars-supe)'s [`importreplace`](https://github.com/edgars-supe/beets-importreplace)
-- My [`tidalv1meta`](https://github.com/treyturner/beets-tidal-v1-meta)
+- My [`tidalv1`](https://github.com/treyturner/beets-plugins/blob/main/plugins/tidalv1/README.md)
+- My [`nohirescd`](https://github.com/treyturner/beets-plugins/blob/main/plugins/nohirescd/README.md)
 
 ### Python packages
 
@@ -85,10 +86,10 @@ The container is suited for one-off commands; simply put it after the image name
 $ docker run --rm \
   -v "$(pwd)/config:/config" \
   -v "$(pwd)/library:/library" \
-  ghcr.io/treyturner/beets:v2.12.0 \
+  ghcr.io/treyturner/beets:v2.13.1 \
   beet --version
 
-beets version 2.12.0
+beets version 2.13.1
 ```
 
 ### Interactive shell
@@ -99,11 +100,11 @@ The image ships with `bash` if you prefer to work with an interactive shell insi
 $ docker run --rm -it \
   -v "$(pwd)/config:/config" \
   -v "$(pwd)/library:/library" \
-  ghcr.io/treyturner/beets:v2.12.0 \
+  ghcr.io/treyturner/beets:v2.13.1 \
   bash
 
 b8afc450904c:/config$ beet --version
-beets version 2.12.0
+beets version 2.13.1
 ```
 
 ### Persisting a container
@@ -115,7 +116,7 @@ $ docker run -d --rm --name beets \
   -p 8337:8337 \
   -v "$(pwd)/config:/config" \
   -v "$(pwd)/library:/library" \
-  ghcr.io/treyturner/beets:v2.12.0
+  ghcr.io/treyturner/beets:v2.13.1
 
 $ docker logs beets
  * Serving Flask app 'beetsplug.web'
@@ -130,7 +131,7 @@ Once started, you can access the UI at `http://ip.of.docker.host:8337`, or start
 ```shell
 $ docker exec -it beets bash
 2edbccf027b4:/config# beet --version
-beets version 2.12.0
+beets version 2.13.1
 ```
 
 ### Installing additional packages at runtime
@@ -147,7 +148,7 @@ $ docker run -d --name beets \
   -p 8337:8337 \
   -v "$(pwd)/config:/config" \
   -v "$(pwd)/library:/library" \
-  ghcr.io/treyturner/beets:v2.12.0
+  ghcr.io/treyturner/beets:v2.13.1
 ```
 
 ### Database trouble?
@@ -156,7 +157,7 @@ You can add `sqlite` to the container to debug or resolve problems with the beet
 
 ```bash
 # If container isn't running...
-docker run -it --rm -w /config -e RUNTIME_APK_PACKAGES="sqlite" ghcr.io/treyturner/beets:v2.12.0 sqlite3 library.db
+docker run -it --rm -w /config -e RUNTIME_APK_PACKAGES="sqlite" ghcr.io/treyturner/beets:v2.13.1 sqlite3 library.db
 
 # With container running...
 docker exec -it -w /config beets bash -c 'apk add --no-cache sqlite && sqlite3 library.db'

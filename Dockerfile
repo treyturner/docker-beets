@@ -15,14 +15,14 @@ LABEL \
 
 # -------- Build-time args you can override at build --------
 # Git ref (tag/branch/sha) to build from the beets repo
-ARG BEETS_REF=v2.12.0
+ARG BEETS_REF=v2.13.1
 # Space-separated extra APK packages needed ONLY for building (e.g., ffmpeg-dev)
 ARG APK_BUILD_DEPS=""
 # Space-separated Python package sources bundled by default alongside beets
 # (git URLs allowed; leave blank to skip)
-ARG DEFAULT_PIP_SOURCES="beets-beatport4 beets-filetote git+https://github.com/edgars-supe/beets-importreplace.git git+https://github.com/treyturner/beets-tidal-v1-meta.git titlecase requests requests-oauthlib beautifulsoup4 pyacoustid pylast python3-discogs-client langdetect flask Pillow"
+ARG DEFAULT_PIP_SOURCES="beets-beatport4 beets-filetote git+https://github.com/edgars-supe/beets-importreplace.git beets-tidalv1 beets-nohirescd titlecase requests requests-oauthlib beautifulsoup4 pyacoustid pylast python3-discogs-client langdetect flask Pillow"
 # Space-separated distribution names installed in the runtime stage
-ARG DEFAULT_PIP_PACKAGES="beets-beatport4 beets-filetote beets-importreplace beets-tidal-v1-meta titlecase requests requests-oauthlib beautifulsoup4 pyacoustid pylast python3-discogs-client langdetect flask Pillow"
+ARG DEFAULT_PIP_PACKAGES="beets-beatport4 beets-filetote beets-importreplace beets-tidalv1 beets-nohirescd titlecase requests requests-oauthlib beautifulsoup4 pyacoustid pylast python3-discogs-client langdetect flask Pillow"
 # Space-separated override mappings ("pkg=spec") replacing sources in DEFAULT_PIP_SOURCES
 ARG PIP_SOURCE_OVERRIDES=""
 # Space-separated user Python packages to bundle (wheels built & installed)
@@ -76,11 +76,11 @@ RUN --mount=type=cache,id=builder-pip,target=/root/.cache/pip,sharing=locked \
     default_sources="${DEFAULT_PIP_SOURCES}"; \
     default_packages="${DEFAULT_PIP_PACKAGES}"; \
     case "${beets_version}" in \
-      2.3.*|2.4.*|2.5.*|2.6.*|2.7.*|2.8.*|2.9.*|2.10.*|2.11.*|2.12.*) keep_filetote=true ;; \
+      2.3.*|2.4.*|2.5.*|2.6.*|2.7.*|2.8.*|2.9.*|2.10.*|2.11.*|2.12.*|2.13.*) keep_filetote=true ;; \
       *) keep_filetote=false ;; \
     esac; \
     if [ "${keep_filetote}" != "true" ]; then \
-      echo "Disabling beets-filetote (requires beets >= 2.3.0 and < 2.12.0)" >&2; \
+      echo "Disabling beets-filetote (requires beets >= 2.3.0 and < 2.14.0)" >&2; \
       filtered=''; \
       for pkg in ${default_sources}; do \
         if [ "${pkg}" = "beets-filetote" ] || [ -z "${pkg}" ]; then \

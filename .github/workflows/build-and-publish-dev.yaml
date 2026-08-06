@@ -8,6 +8,7 @@ on:
       upstream-ref:
         required: false
         type: string
+        description: "e.g. 'v2.13.1'"
 
 jobs:
   build-and-publish-dev:

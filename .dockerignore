@@ -1,3 +1,5 @@
 *
 !docker-entrypoint.sh
 !start-web.sh
+!patches/
+!patches/**

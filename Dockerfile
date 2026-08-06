@@ -122,23 +122,22 @@ while read -r patch_file min_version max_version extra; do
   listed_patches="${listed_patches}${patch_file} "
 
   applies="$(python3 -c '
-import re
 import sys
 
+try:
+    from packaging.version import InvalidVersion, Version
+except ImportError:
+    from pip._vendor.packaging.version import InvalidVersion, Version
+
 def parse(value):
-    match = re.fullmatch(r"v?(\d+(?:\.\d+)*)", value)
-    if not match:
-        raise SystemExit(f"Invalid numeric version: {value}")
-    return tuple(int(part) for part in match.group(1).split("."))
+    try:
+        return Version(value)
+    except InvalidVersion as error:
+        raise SystemExit(f"Invalid PEP 440 version: {value}") from error
 
 current = parse(sys.argv[1])
 minimum = parse(sys.argv[2])
 maximum = parse(sys.argv[3]) if sys.argv[3] else None
-width = max(len(current), len(minimum), len(maximum or ()))
-normalize = lambda value: value + (0,) * (width - len(value))
-current = normalize(current)
-minimum = normalize(minimum)
-maximum = normalize(maximum) if maximum else None
 if maximum is not None and maximum <= minimum:
     raise SystemExit("Maximum patch version must be greater than its minimum")
 print("yes" if current >= minimum and (maximum is None or current < maximum) else "no")

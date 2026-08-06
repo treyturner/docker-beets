@@ -190,6 +190,17 @@ docker build \
 | `PIP_SOURCE_OVERRIDES`   | Space-separated overrides in the form `package=spec`, replacing entries in `DEFAULT_PIP_SOURCES`                                   |
 | `USER_PIP_PACKAGES`      | Space-separated list of user Python packages (wheels). Must already exist on PyPI or a compatible index so they can be wheeled offline. |
 
+### Upstream patches
+
+Patch files in `patches/` are named for their upstream beets issue or pull request number. Each patch must have one entry in `patches/series` with an inclusive minimum beets version and, optionally, an exclusive maximum version:
+
+```text
+# patch      min-version  max-version
+6781.diff    2.13.1
+```
+
+For example, changing that entry to `6781.diff 2.13.1 2.14.0` applies the patch to beets versions from 2.13.1 up to, but not including, 2.14.0. The build skips patches outside their range or already present upstream, and fails if an applicable patch cannot be applied cleanly.
+
 #### Overriding default pip sources
 
 Set `PIP_SOURCE_OVERRIDES` to point specific packages at alternative sources (e.g., Git forks) without editing the Dockerfile:
@@ -227,22 +238,24 @@ Where each build argument and environment variable applies during the image buil
 flowchart TD
   A1["<strong>Build Args</strong><br/>PYTHON_VERSION<br/>PYTHON_BASE_SUFFIX"] --> B0
   A2["<strong>Build Arg</strong><br/>APK_BUILD_DEPS"] --> B1
-  A3["<strong>Build Args</strong><br/>BEETS_REF<br/>DEFAULT_PIP_SOURCES<br/>PIP_SOURCE_OVERRIDES<br/>DEFAULT_PIP_PACKAGES<br/>USER_PIP_PACKAGES"] --> B2
+  A3["<strong>Build Arg</strong><br/>BEETS_REF"] --> B2
   A4["<strong>Build Arg</strong><br/>APK_RUNTIME_EXTRAS"] --> R1
   A5["<strong>Build Args</strong><br/>DEFAULT_PIP_PACKAGES<br/>USER_PIP_PACKAGES"] --> R2
   A6["<strong>Env. Vars</strong><br/>PUID<br/>PGID<br/>UMASK"] --> E1
   A7["<strong>Env. Vars</strong><br/>RUNTIME_APK_PACKAGES<br/>RUNTIME_PIP_PACKAGES"] --> E2
+  A8["<strong>Build Args</strong><br/>DEFAULT_PIP_SOURCES<br/>PIP_SOURCE_OVERRIDES<br/>DEFAULT_PIP_PACKAGES<br/>USER_PIP_PACKAGES"] --> B3
 
   subgraph Docker Build
     direction LR
     subgraph Builder Stage
       B0["Select Python Base Image"] --> B1
       B1["apk add build deps<br/>+ APK_BUILD_DEPS"] --> B2
-      B2["pip wheel into /wheels:<br/>beets, default srcs + pkgs<br/>+ USER_PIP_PACKAGES"]
+      B2["Clone beets<br/>Apply in-range patches"] --> B3
+      B3["pip wheel into /wheels:<br/>beets, default srcs + pkgs<br/>+ USER_PIP_PACKAGES"]
     end
 
     subgraph Runtime Stage
-      B2 --> R1["apk add runtime deps:<br/>ffmpeg, chromaprint, imagemagick, ...<br/>+ APK_RUNTIME_EXTRAS"]
+      B3 --> R1["apk add runtime deps:<br/>ffmpeg, chromaprint, imagemagick, ...<br/>+ APK_RUNTIME_EXTRAS"]
       R1 --> R2["pip install from wheels:<br/>beets, default pkgs<br/>+ USER_PIP_PACKAGES"]
       R2 --> R3["Copy entry scripts & licenses"]
     end
@@ -260,8 +273,8 @@ flowchart TD
   classDef runtime fill:#dcfce7,stroke:#16a34a,color:#052e16;
   classDef start fill:#fef3c7,stroke:#d97706,color:#78350f;
 
-  class A1,A2,A3,A4,A5,A6,A7 env;
-  class B0,B1,B2 builder;
+  class A1,A2,A3,A4,A5,A6,A7,A8 env;
+  class B0,B1,B2,B3 builder;
   class R1,R2,R3 runtime;
   class E1,E2,E3 start;
 ```

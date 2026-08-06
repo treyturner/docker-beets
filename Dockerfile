@@ -51,6 +51,129 @@ RUN mkdir -p /wheels
 # Fetch beets source at the requested ref
 RUN git clone --depth 1 --branch "${BEETS_REF}" https://github.com/beetbox/beets.git
 
+# Apply patches whose configured version range includes this beets release.
+# patches/series columns are: patch, inclusive minimum, optional exclusive maximum.
+COPY patches/ /patches/
+RUN <<'EOF'
+set -eux
+
+if [ ! -f /patches/series ]; then
+  echo "Missing patch manifest: /patches/series" >&2
+  exit 1
+fi
+
+beets_version="$({
+  awk -F'"' '/^version[[:space:]]*=/ { print $2; exit }' beets/pyproject.toml
+} 2>/dev/null || true)"
+if [ -z "${beets_version}" ]; then
+  beets_version="$({
+    awk -F'"' '/^__version__[[:space:]]*=/ { print $2; exit }' beets/beets/__init__.py
+  } 2>/dev/null || true)"
+fi
+if [ -z "${beets_version}" ]; then
+  echo "Unable to determine the beets version for ${BEETS_REF}" >&2
+  exit 1
+fi
+
+listed_patches=' '
+while read -r patch_file min_version max_version extra; do
+  case "${patch_file}" in
+    ''|'#'*) continue ;;
+  esac
+
+  if [ -n "${extra:-}" ]; then
+    echo "Invalid patch manifest entry for ${patch_file}: expected 2 or 3 columns" >&2
+    exit 1
+  fi
+  if [ -z "${min_version:-}" ]; then
+    echo "Missing minimum version for ${patch_file}" >&2
+    exit 1
+  fi
+  case "${patch_file}" in
+    */*)
+      echo "Invalid patch filename '${patch_file}'; expected an issue number followed by .diff" >&2
+      exit 1
+      ;;
+  esac
+  case "${patch_file}" in
+    *.diff) ;;
+    *)
+      echo "Invalid patch filename '${patch_file}'; expected an issue number followed by .diff" >&2
+      exit 1
+      ;;
+  esac
+  issue_number="${patch_file%.diff}"
+  case "${issue_number}" in
+    ''|*[!0-9]*)
+      echo "Invalid patch filename '${patch_file}'; expected an issue number followed by .diff" >&2
+      exit 1
+      ;;
+  esac
+  if [ ! -f "/patches/${patch_file}" ]; then
+    echo "Patch listed in manifest does not exist: ${patch_file}" >&2
+    exit 1
+  fi
+  case "${listed_patches}" in
+    *" ${patch_file} "*)
+      echo "Patch is listed more than once: ${patch_file}" >&2
+      exit 1
+      ;;
+  esac
+  listed_patches="${listed_patches}${patch_file} "
+
+  applies="$(python3 -c '
+import re
+import sys
+
+def parse(value):
+    match = re.fullmatch(r"v?(\d+(?:\.\d+)*)", value)
+    if not match:
+        raise SystemExit(f"Invalid numeric version: {value}")
+    return tuple(int(part) for part in match.group(1).split("."))
+
+current = parse(sys.argv[1])
+minimum = parse(sys.argv[2])
+maximum = parse(sys.argv[3]) if sys.argv[3] else None
+width = max(len(current), len(minimum), len(maximum or ()))
+normalize = lambda value: value + (0,) * (width - len(value))
+current = normalize(current)
+minimum = normalize(minimum)
+maximum = normalize(maximum) if maximum else None
+if maximum is not None and maximum <= minimum:
+    raise SystemExit("Maximum patch version must be greater than its minimum")
+print("yes" if current >= minimum and (maximum is None or current < maximum) else "no")
+' "${beets_version}" "${min_version}" "${max_version:-}")"
+
+  if [ "${applies}" != yes ]; then
+    echo "Skipping issue #${issue_number} patch for beets ${beets_version} (range: >=${min_version}${max_version:+, <${max_version}})"
+    continue
+  fi
+
+  if git -C beets apply --reverse --check "/patches/${patch_file}" 2>/dev/null; then
+    echo "Skipping issue #${issue_number} patch: fix is already present in ${BEETS_REF}"
+    continue
+  fi
+
+  echo "Applying issue #${issue_number} patch for beets ${beets_version}"
+  git -C beets apply --check "/patches/${patch_file}"
+  git -C beets apply "/patches/${patch_file}"
+done < /patches/series
+
+for patch_path in /patches/*.diff; do
+  if [ ! -e "${patch_path}" ]; then
+    continue
+  fi
+  patch_file="${patch_path##*/}"
+  case "${listed_patches}" in
+    *" ${patch_file} "*) ;;
+    *)
+      echo "Patch is missing from /patches/series: ${patch_file}" >&2
+      exit 1
+      ;;
+  esac
+done
+EOF
+
 # Build wheels for beets and any requested packages into /wheels.
 # Building wheels up front guarantees availability in the final stage.
 # Passing the source-built beets wheel back into later pip resolution keeps

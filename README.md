@@ -199,7 +199,7 @@ Patch files in `patches/` are named for their upstream beets issue or pull reque
 6781.diff    2.13.1
 ```
 
-For example, changing that entry to `6781.diff 2.13.1 2.14.0` applies the patch to beets versions from 2.13.1 up to, but not including, 2.14.0. The build skips patches outside their range or already present upstream, and fails if an applicable patch cannot be applied cleanly.
+For example, changing that entry to `6781.diff 2.13.1 2.14.0` applies the patch to beets versions from 2.13.1 up to, but not including, 2.14.0. Versions use PEP 440 ordering, so development and release-candidate versions such as `2.14.0.dev0` and `2.14.0rc1` remain below the final `2.14.0` release. The build skips patches outside their range or already present upstream, and fails if an applicable patch cannot be applied cleanly.
 
 #### Overriding default pip sources
 

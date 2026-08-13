@@ -4,15 +4,12 @@ description: Build a Dockerfile
 inputs:
   label:
     description: "Optional build suffix, e.g. 'dev'"
-    type: string
     required: false
   repos:
     description: "Newline-separated list of <registry>/<repository> used to build refs"
-    type: string
     required: false
   upstream-ref:
     description: "Upstream ref to build"
-    type: string
     required: true
 
 outputs:

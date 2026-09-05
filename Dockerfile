@@ -2,7 +2,7 @@
 ARG PYTHON_VERSION=3.14 \
     PYTHON_BASE_SUFFIX=alpine
 
-FROM --platform=$BUILDPLATFORM python:${PYTHON_VERSION}${PYTHON_BASE_SUFFIX:+-${PYTHON_BASE_SUFFIX#-}} AS builder
+FROM --platform=$BUILDPLATFORM python:${PYTHON_VERSION}${PYTHON_BASE_SUFFIX:+-${PYTHON_BASE_SUFFIX#-}} AS dependency-builder
 
 LABEL \
   org.opencontainers.image.title="beets" \
@@ -50,6 +50,90 @@ RUN mkdir -p /wheels
 
 # Fetch beets source at the requested ref
 RUN git clone --depth 1 --branch "${BEETS_REF}" https://github.com/beetbox/beets.git
+
+# Build an unpatched beets wheel and all third-party wheels before copying the
+# patches into the image. The unpatched wheel supplies beets metadata to pip's
+# dependency resolver and is replaced by the patched wheel in the final image.
+RUN --mount=type=cache,id=builder-pip,target=/root/.cache/pip,sharing=locked \
+    set -eux; \
+    python3 -m pip wheel --wheel-dir /wheels ./beets; \
+    beets_wheel=''; \
+    for wheel in /wheels/beets-*.whl; do \
+      beets_wheel="${wheel}"; \
+      break; \
+    done; \
+    if [ -z "${beets_wheel}" ] || [ ! -f "${beets_wheel}" ]; then \
+      echo "Beets wheel missing after build step" >&2; \
+      exit 1; \
+    fi; \
+    beets_basename="$(basename "${beets_wheel}")"; \
+    beets_version="$(printf '%s' "${beets_basename}" | sed -E 's/^beets-([0-9]+(\.[0-9]+)*)-.*/\1/')"; \
+    if [ -z "${beets_version}" ] || [ "${beets_version}" = "${beets_basename}" ]; then \
+      echo "Unable to parse beets version from wheel name: ${beets_basename}" >&2; \
+      exit 1; \
+    fi; \
+    default_sources="${DEFAULT_PIP_SOURCES}"; \
+    default_packages="${DEFAULT_PIP_PACKAGES}"; \
+    case "${beets_version}" in \
+      2.3.*|2.4.*|2.5.*|2.6.*|2.7.*|2.8.*|2.9.*|2.10.*|2.11.*|2.12.*|2.13.*) keep_filetote=true ;; \
+      *) keep_filetote=false ;; \
+    esac; \
+    if [ "${keep_filetote}" != "true" ]; then \
+      echo "Disabling beets-filetote (requires beets >= 2.3.0 and < 2.14.0)" >&2; \
+      filtered=''; \
+      for pkg in ${default_sources}; do \
+        if [ "${pkg}" = "beets-filetote" ] || [ -z "${pkg}" ]; then \
+          continue; \
+        fi; \
+        filtered="${filtered} ${pkg}"; \
+      done; \
+      default_sources="${filtered# }"; \
+      filtered=''; \
+      for pkg in ${default_packages}; do \
+        if [ "${pkg}" = "beets-filetote" ] || [ -z "${pkg}" ]; then \
+          continue; \
+        fi; \
+        filtered="${filtered} ${pkg}"; \
+      done; \
+      default_packages="${filtered# }"; \
+    fi; \
+    overrides="${PIP_SOURCE_OVERRIDES}"; \
+    if [ -n "${overrides}" ]; then \
+      for override in ${overrides}; do \
+        pkg="${override%%=*}"; \
+        src="${override#*=}"; \
+        if [ -z "${pkg}" ] || [ -z "${src}" ] || [ "${pkg}" = "${src}" ]; then \
+          echo "Invalid pip override '${override}'. Expected key=value." >&2; \
+          exit 1; \
+        fi; \
+        filtered=''; \
+        for entry in ${default_sources}; do \
+          if [ "${entry}" = "${pkg}" ]; then \
+            continue; \
+          fi; \
+          filtered="${filtered} ${entry}"; \
+        done; \
+        default_sources="${filtered# }"; \
+        if [ -n "${default_sources}" ]; then \
+          default_sources="${default_sources} ${src}"; \
+        else \
+          default_sources="${src}"; \
+        fi; \
+      done; \
+    fi; \
+    tmp_dir="$(mktemp -d)"; \
+    mv "${beets_wheel}" "${tmp_dir}/"; \
+    if [ -n "${default_sources}" ]; then \
+      python3 -m pip wheel --wheel-dir /wheels "${tmp_dir}/${beets_basename}" ${default_sources}; \
+    fi; \
+    if [ -n "${USER_PIP_PACKAGES}" ]; then \
+      python3 -m pip wheel --wheel-dir /wheels "${tmp_dir}/${beets_basename}" ${USER_PIP_PACKAGES}; \
+    fi; \
+    printf '%s' "${default_packages}" > /wheels/.default-packages; \
+    mv "${tmp_dir}/${beets_basename}" /wheels/; \
+    rmdir "${tmp_dir}"
+
+FROM dependency-builder AS builder
 
 # Apply patches whose configured version range includes this beets release.
 # patches/series columns are: patch, inclusive minimum, optional exclusive maximum.
@@ -148,6 +232,19 @@ print("yes" if current >= minimum and (maximum is None or current < maximum) els
     continue
   fi
 
+  changed_paths="$(sed -n \
+    -e 's|^--- a/||p' \
+    -e 's|^+++ b/||p' \
+    "/patches/${patch_file}")"
+  for changed_path in ${changed_paths}; do
+    case "/${changed_path}" in
+      */pyproject.toml|*/setup.py|*/setup.cfg|*/uv.lock|*/poetry.lock|*/pdm.lock|*/hatch.toml|*/Pipfile|*/Pipfile.lock|*/requirements*.txt|*/constraints*.txt|*/requirements/*)
+        echo "Patch ${patch_file} changes dependency metadata (${changed_path}); patches are applied after dependency wheels are built" >&2
+        exit 1
+        ;;
+    esac
+  done
+
   if git -C beets apply --reverse --check "/patches/${patch_file}" 2>/dev/null; then
     echo "Skipping issue #${issue_number} patch: fix is already present in ${BEETS_REF}"
     continue
@@ -173,89 +270,17 @@ for patch_path in /patches/*.diff; do
 done
 EOF
 
-# Build wheels for beets and any requested packages into /wheels.
-# Building wheels up front guarantees availability in the final stage.
-# Passing the source-built beets wheel back into later pip resolution keeps
-# bundled plugins from replacing it with PyPI's beets wheel metadata.
+# Build only the final patched beets wheel. Third-party dependency resolution
+# was completed in the patch-independent dependency-builder stage.
 RUN --mount=type=cache,id=builder-pip,target=/root/.cache/pip,sharing=locked \
     set -eux; \
-    python3 -m pip wheel --wheel-dir /wheels ./beets; \
-    beets_wheel=''; \
-    for wheel in /wheels/beets-*.whl; do \
-      beets_wheel="${wheel}"; \
-      break; \
-    done; \
-    if [ -z "${beets_wheel}" ] || [ ! -f "${beets_wheel}" ]; then \
-      echo "Beets wheel missing after build step" >&2; \
+    mkdir -p /beets-wheel; \
+    python3 -m pip wheel --no-deps --wheel-dir /beets-wheel ./beets; \
+    set -- /beets-wheel/beets-*.whl; \
+    if [ "$#" -ne 1 ] || [ ! -f "$1" ]; then \
+      echo "Expected exactly one patched beets wheel" >&2; \
       exit 1; \
-    fi; \
-    beets_basename="$(basename "${beets_wheel}")"; \
-    beets_version="$(printf '%s' "${beets_basename}" | sed -E 's/^beets-([0-9]+(\.[0-9]+)*)-.*/\1/')"; \
-    if [ -z "${beets_version}" ] || [ "${beets_version}" = "${beets_basename}" ]; then \
-      echo "Unable to parse beets version from wheel name: ${beets_basename}" >&2; \
-      exit 1; \
-    fi; \
-    default_sources="${DEFAULT_PIP_SOURCES}"; \
-    default_packages="${DEFAULT_PIP_PACKAGES}"; \
-    case "${beets_version}" in \
-      2.3.*|2.4.*|2.5.*|2.6.*|2.7.*|2.8.*|2.9.*|2.10.*|2.11.*|2.12.*|2.13.*) keep_filetote=true ;; \
-      *) keep_filetote=false ;; \
-    esac; \
-    if [ "${keep_filetote}" != "true" ]; then \
-      echo "Disabling beets-filetote (requires beets >= 2.3.0 and < 2.14.0)" >&2; \
-      filtered=''; \
-      for pkg in ${default_sources}; do \
-        if [ "${pkg}" = "beets-filetote" ] || [ -z "${pkg}" ]; then \
-          continue; \
-        fi; \
-        filtered="${filtered} ${pkg}"; \
-      done; \
-      default_sources="${filtered# }"; \
-      filtered=''; \
-      for pkg in ${default_packages}; do \
-        if [ "${pkg}" = "beets-filetote" ] || [ -z "${pkg}" ]; then \
-          continue; \
-        fi; \
-        filtered="${filtered} ${pkg}"; \
-      done; \
-      default_packages="${filtered# }"; \
-    fi; \
-    overrides="${PIP_SOURCE_OVERRIDES}"; \
-    if [ -n "${overrides}" ]; then \
-      for override in ${overrides}; do \
-        pkg="${override%%=*}"; \
-        src="${override#*=}"; \
-        if [ -z "${pkg}" ] || [ -z "${src}" ] || [ "${pkg}" = "${src}" ]; then \
-          echo "Invalid pip override '${override}'. Expected key=value." >&2; \
-          exit 1; \
-        fi; \
-        filtered=''; \
-        for entry in ${default_sources}; do \
-          if [ "${entry}" = "${pkg}" ]; then \
-            continue; \
-          fi; \
-          filtered="${filtered} ${entry}"; \
-        done; \
-        default_sources="${filtered# }"; \
-        if [ -n "${default_sources}" ]; then \
-          default_sources="${default_sources} ${src}"; \
-        else \
-          default_sources="${src}"; \
-        fi; \
-      done; \
-    fi; \
-    tmp_dir="$(mktemp -d)"; \
-    mv "${beets_wheel}" "${tmp_dir}/"; \
-    if [ -n "${default_sources}" ]; then \
-      python3 -m pip wheel --wheel-dir /wheels "${tmp_dir}/${beets_basename}" ${default_sources}; \
-    fi; \
-    if [ -n "${USER_PIP_PACKAGES}" ]; then \
-      python3 -m pip wheel --wheel-dir /wheels "${tmp_dir}/${beets_basename}" ${USER_PIP_PACKAGES}; \
-    fi; \
-    printf '%s' "${default_packages}" > /wheels/.default-packages; \
-    rm -f /wheels/beets-*.whl; \
-    mv "${tmp_dir}/${beets_basename}" /wheels/; \
-    rmdir "${tmp_dir}"
+    fi
 
 # ------------------------------------------------------------------------
 
@@ -293,9 +318,10 @@ RUN --mount=type=cache,id=runtime-apk,target=/var/cache/apk,sharing=locked \
       yq \
       ${APK_RUNTIME_EXTRAS}
 
-# Bring in built wheels and install without hitting network
+# Install the patch-independent wheelhouse, including an unpatched beets wheel
+# used to satisfy plugin dependencies. The next layer replaces beets itself.
 ARG USER_PIP_PACKAGES=""
-COPY --from=builder /wheels /wheels
+COPY --from=dependency-builder /wheels /wheels
 RUN set -eux; \
     python3 -m pip install --no-index --find-links=/wheels beets; \
     if [ ! -f /wheels/.default-packages ]; then \
@@ -311,6 +337,18 @@ RUN set -eux; \
     fi; \
     rm -rf /wheels; \
     mkdir -p "${CONFIG_DIR}"
+
+# Install the patched beets wheel separately so patch-only changes do not
+# invalidate third-party package installation.
+COPY --from=builder /beets-wheel /beets-wheel
+RUN set -eux; \
+    set -- /beets-wheel/beets-*.whl; \
+    if [ "$#" -ne 1 ] || [ ! -f "$1" ]; then \
+      echo "Expected exactly one patched beets wheel" >&2; \
+      exit 1; \
+    fi; \
+    python3 -m pip install --no-index --no-deps --force-reinstall "$1"; \
+    rm -rf /beets-wheel
 
 # Set working directory to the config mount (entrypoint handles UID/GID setup)
 WORKDIR ${CONFIG_DIR}

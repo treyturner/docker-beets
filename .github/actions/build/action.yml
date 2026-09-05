@@ -89,8 +89,6 @@ runs:
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e  # v4.3.0
-      with:
-        driver: docker
 
     - name: Build image
       id: build
@@ -102,3 +100,5 @@ runs:
         build-args: |
           BEETS_REF=${{ inputs.upstream-ref }}
         tags: ${{ steps.compute.outputs.refs }}
+        cache-from: type=gha,scope=docker-beets
+        cache-to: type=gha,mode=max,scope=docker-beets
